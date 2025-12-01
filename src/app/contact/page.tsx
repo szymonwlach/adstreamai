@@ -334,6 +334,8 @@
 // export default Contact;
 import React from "react";
 
-export const page = () => {
+const Contact = () => {
   return <div>Contact</div>;
 };
+
+export default Contact;
