@@ -1,3 +1,4 @@
+"use client";
 import { ResetPasswordCard } from "@/components/auth/ResetPassword";
 
 export default function ResetPasswordPage() {
