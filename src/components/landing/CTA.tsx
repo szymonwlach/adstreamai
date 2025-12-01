@@ -28,13 +28,17 @@ export const CTA = () => {
               size="lg"
               className="group bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-10 py-7 rounded-xl font-semibold shadow-lg glow-primary transition-all"
             >
-              Start Free Trial
+              Get Started
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button
               size="lg"
               variant="outline"
               className="text-lg px-10 py-7 rounded-xl font-semibold border-border/50 hover:border-primary/50 backdrop-blur-sm"
+              onClick={() =>
+                (window.location.href =
+                  "mailto:contact@adstreamai.com?subject=Schedule a Demo")
+              }
             >
               Schedule a Demo
             </Button>

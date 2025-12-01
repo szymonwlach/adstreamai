@@ -1,7 +1,29 @@
+import { CircleChevronLeft } from "lucide-react";
 import React from "react";
 
 const Contact = () => {
-  return <div>Contact page</div>;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+      <div className="fixed top-5 left-5">
+        <a
+          href="/#footer"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <CircleChevronLeft size={30} />
+        </a>
+      </div>
+      <h1 className="text-3xl font-bold text-white mb-4">Contact Us</h1>
+      <p className="text-white text-lg">
+        You can reach us at:{" "}
+        <a
+          href="mailto:contact@adstreamai.com"
+          className="text-blue-400 hover:underline"
+        >
+          contact@adstreamai.com
+        </a>
+      </p>
+    </div>
+  );
 };
 
 export default Contact;

@@ -15,7 +15,7 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
 }) => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <div className="absolute top-5 left-5">
+      <div className="fixed top-5 left-5">
         <a
           href="/#footer"
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -236,7 +236,7 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">
-              8. Fees and Payment
+              8. Fees, Payment, and Credits
             </h2>
 
             <h3 className="text-xl font-medium text-white mt-6 mb-3">
@@ -249,29 +249,29 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
             </p>
 
             <h3 className="text-xl font-medium text-white mt-6 mb-3">
-              8.2 Billing
+              8.2 Credits
             </h3>
             <p className="leading-relaxed">
-              Subscription fees are billed in advance on a recurring basis
-              (monthly or annually, as selected). You authorize us to charge
-              your payment method automatically.
+              Users purchase credits to generate AI-powered content. Unused
+              credits roll over month to month and never expire. You can cancel
+              your subscription at any time and retain any unused credits.
             </p>
 
             <h3 className="text-xl font-medium text-white mt-6 mb-3">
               8.3 Refunds
             </h3>
             <p className="leading-relaxed">
-              Refund policies are specified on our website. Generally,
-              subscription fees are non-refundable except as required by law or
-              as explicitly stated in our refund policy.
+              Subscription fees are generally non-refundable. However, any
+              unused credits are retained as described above.
             </p>
 
             <h3 className="text-xl font-medium text-white mt-6 mb-3">
-              8.4 Price Changes
+              8.4 Billing & Price Changes
             </h3>
             <p className="leading-relaxed">
-              We reserve the right to change our pricing with at least 30 days'
-              notice to active subscribers.
+              Subscription fees are billed in advance on a recurring basis
+              (monthly or annually, as selected). We reserve the right to change
+              our pricing with at least 30 days' notice to active subscribers.
             </p>
           </section>
 
@@ -439,10 +439,42 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
               written consent. We may assign our rights without restriction.
             </p>
           </section>
+          <section>
+            <h2 className="text-2xl font-semibold text-white mb-4">
+              15. Third-Party Platform Integrations
+            </h2>
+            <p className="leading-relaxed mb-4">
+              {companyName} may connect with third-party social media platforms
+              (such as TikTok, Instagram, Facebook, YouTube, and LinkedIn) to
+              enable posting, scheduling, and analytics of your content.
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>
+                <strong className="text-white">Data Shared:</strong> Only
+                necessary account information, authentication tokens, and
+                AI-generated content required to provide the Service.
+              </li>
+              <li>
+                <strong className="text-white">Purpose:</strong> To create,
+                optimize, schedule, and analyze advertisements on connected
+                platforms.
+              </li>
+              <li>
+                <strong className="text-white">User Control:</strong> You can
+                disconnect any platform at any time through your account
+                settings, which will revoke {companyName}'s access.
+              </li>
+              <li>
+                <strong className="text-white">Platform Policies:</strong> Each
+                platform's use of your information is subject to their own
+                privacy policies, and you must comply with them.
+              </li>
+            </ul>
+          </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">
-              15. Contact Information
+              16. Contact Information
             </h2>
             <p className="leading-relaxed mb-4">
               For questions about these Terms & Conditions, please contact us

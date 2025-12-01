@@ -6,15 +6,21 @@ import { Platforms } from "@/components/landing/Platforms";
 import { Pricing } from "@/components/landing/Pricing";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
+import ComingSoon from "@/components/landing/ComingSoon";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <ComingSoon />
       <Hero />
       <HowItWorks />
-      <Features />
-      <Platforms />
+      <div id="features">
+        <Features />
+      </div>
+      <div id="platforms">
+        <Platforms />
+      </div>
       <Pricing />
       <CTA />
       <div id="footer">

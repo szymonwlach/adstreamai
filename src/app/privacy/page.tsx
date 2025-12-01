@@ -15,7 +15,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
 }) => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <div className="absolute top-5 left-5">
+      <div className="fixed top-5 left-5">
         <a
           href="/#footer"
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -521,10 +521,42 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
               us immediately, and we will delete such information.
             </p>
           </section>
+          <section>
+            <h2 className="text-2xl font-semibold text-white mb-4">
+              11. Third-Party Platform Integrations
+            </h2>
+            <p className="leading-relaxed mb-4">
+              {companyName} may integrate with third-party social media
+              platforms such as TikTok, Instagram, Facebook, YouTube, and
+              LinkedIn to enable content publishing and analytics.
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>
+                <strong className="text-white">Data Shared:</strong> Only the
+                necessary account information, authentication tokens, and
+                AI-generated content needed to provide the Service.
+              </li>
+              <li>
+                <strong className="text-white">Purpose:</strong> To schedule,
+                publish, and analyze your content on connected platforms.
+              </li>
+              <li>
+                <strong className="text-white">Platform Policies:</strong> Each
+                platform's use of your information is governed by their own
+                privacy policies. Users must comply with these policies when
+                connecting accounts.
+              </li>
+              <li>
+                <strong className="text-white">Revoking Access:</strong> You can
+                disconnect any connected platform at any time via your account
+                settings, which will revoke {companyName}'s access.
+              </li>
+            </ul>
+          </section>
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">
-              11. Third-Party Links and Services
+              12. Third-Party Links and Services
             </h2>
             <p className="leading-relaxed">
               Our Service may contain links to third-party websites and
@@ -536,7 +568,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">
-              12. Changes to This Privacy Policy
+              13. Changes to This Privacy Policy
             </h2>
             <p className="leading-relaxed mb-4">
               We may update this Privacy Policy from time to time. We will
@@ -557,7 +589,7 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
 
           <section>
             <h2 className="text-2xl font-semibold text-white mb-4">
-              13. Contact Us
+              14. Contact Us
             </h2>
             <p className="leading-relaxed mb-4">
               If you have questions, concerns, or requests regarding this
