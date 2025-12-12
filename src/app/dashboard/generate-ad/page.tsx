@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Upload, Sparkles, Wand2, Globe, Crown, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,8 @@ import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const GenerateAd = () => {
+// Separate component that uses useSearchParams
+const GenerateAdContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -788,6 +789,28 @@ const GenerateAd = () => {
         </Card>
       </div>
     </div>
+  );
+};
+
+// Loading fallback component
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-background">
+    <DashboardNavbar />
+    <div className="container mx-auto px-6 py-12 mt-20 flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  </div>
+);
+
+// Main exported component wrapped in Suspense
+const GenerateAd = () => {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <GenerateAdContent />
+    </Suspense>
   );
 };
 
