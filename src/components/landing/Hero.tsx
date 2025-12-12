@@ -29,7 +29,7 @@ export const Hero = () => {
         <div className="max-w-4xl mx-auto text-center space-y-8">
           <div className="inline-block">
             <span className="px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold backdrop-blur-sm">
-              🚀 Continuous Stream of AI-Generated Ads
+              🚀 AI-Generated Ads Posted Across Platforms
             </span>
           </div>
 
@@ -39,9 +39,8 @@ export const Hero = () => {
           </h1>
 
           <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Upload a product photo, let AI create stunning videos, and
-            automatically post to your selected platforms based on your
-            schedule.
+            Turn any product photo into viral-ready videos and schedule them
+            across all selected platforms — in seconds.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
@@ -54,6 +53,7 @@ export const Hero = () => {
                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </a>
+
             <Button
               size="lg"
               variant="outline"
@@ -67,11 +67,11 @@ export const Hero = () => {
           <div className="pt-8 flex flex-wrap justify-center gap-8 items-center text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span>Set up in 2 minutes</span>
+              <span>Free trial • No credit card</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span>Automated scheduling</span>
+              <span>Set up in 2 minutes</span>
             </div>
           </div>
         </div>

@@ -28,7 +28,7 @@ export const CTA = () => {
               size="lg"
               className="group bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-10 py-7 rounded-xl font-semibold shadow-lg glow-primary transition-all"
             >
-              Get Started
+              Start Free Trial
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
             <Button

@@ -67,7 +67,7 @@ export const DashboardNavbar = () => {
                 My Ads
               </Link>
               <a
-                href="#billing"
+                href="/dashboard/billing"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Billing

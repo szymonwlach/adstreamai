@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import ClientToaster from "@/components/ui/client-toaster";
+import CookieConsent from "@/components/CookieConsent";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -14,7 +15,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AdStreamAI - Stream Your Ads to Every Platform",
+  title: "AdStreamAI - Stream Your Ads to  Platforms",
   description:
     "Create AI-generated product ads and distribute them across every major social platform automatically. Set your ad stream and forget.",
   authors: [{ name: "AdStreamAI" }],
@@ -45,6 +46,7 @@ export default function RootLayout({
             <ClientToaster />
             <Sonner />
             {children}
+            <CookieConsent />
           </TooltipProvider>
         </ReactQueryProvider>
       </body>

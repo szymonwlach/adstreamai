@@ -34,6 +34,25 @@ export function AuthCard({ className, ...props }: React.ComponentProps<"div">) {
   const [touched, setTouched] = useState({ email: false, password: false });
   const router = useRouter();
   const { toast } = useToast();
+  const addUserToDB = async (user: { id: string; email: string }) => {
+    try {
+      await fetch("/api/addUser", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          plan: "free",
+          credits: 0,
+          is_active: true,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to add user to DB", error);
+    }
+  };
 
   // Nasłuchuj zmian autoryzacji
   useEffect(() => {
@@ -45,7 +64,6 @@ export function AuthCard({ className, ...props }: React.ComponentProps<"div">) {
           title: "Success!",
           description: "Redirecting to dashboard...",
         });
-        // Małe opóźnienie dla lepszego UX
         await new Promise((resolve) => setTimeout(resolve, 500));
         router.push("/dashboard");
         router.refresh();
@@ -129,6 +147,11 @@ export function AuthCard({ className, ...props }: React.ComponentProps<"div">) {
           });
           setIsLogin(true);
         } else {
+          if (data.user && data.user.id && data.user.email) {
+            await addUserToDB({ id: data.user.id, email: data.user.email });
+          } else {
+            console.error("User email is missing", data.user);
+          }
           toast({
             title: "Account created!",
             description: "Please check your email to confirm your account.",
@@ -160,13 +183,14 @@ export function AuthCard({ className, ...props }: React.ComponentProps<"div">) {
 
   const handleSocialLogin = async (provider: "google" | "apple") => {
     try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
+
+      console.log("OAuth result:", { data, error });
 
       if (error) throw error;
     } catch (error: any) {

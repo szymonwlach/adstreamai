@@ -1,27 +1,272 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uuid,
+  jsonb,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 
-export const usersTable = pgTable("users_table", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  age: integer("age").notNull(),
+// ============================================
+// ENUMS
+// ============================================
+
+export const planEnum = pgEnum("plan", [
+  "free",
+  "starter",
+  "pro",
+  "enterprise",
+]);
+export const subscriptionStatusEnum = pgEnum("subscription_status", [
+  "active",
+  "past_due",
+  "cancelled",
+  "trialing",
+]);
+export const videoStyleEnum = pgEnum("video_style", [
+  "ugc",
+  "trend",
+  "educational",
+  "testimonial",
+]);
+export const platformEnum = pgEnum("platform", [
+  "tiktok",
+  "instagram",
+  "facebook",
+  "youtube_shorts",
+  "linkedin",
+  "twitter",
+]);
+export const postStatusEnum = pgEnum("post_status", [
+  "draft",
+  "scheduled",
+  "posted",
+  "failed",
+]);
+export const projectStatusEnum = pgEnum("project_status", [
+  "processing",
+  "ready",
+  "failed",
+]);
+
+// ============================================
+// USERS & SUBSCRIPTIONS
+// ============================================
+
+export const usersTable = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  plan: planEnum("plan").notNull().default("free"),
+  credits: integer("credits").notNull().default(1),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+  is_active: boolean("is_active").notNull().default(true),
 });
 
-export const postsTable = pgTable("posts_table", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  userId: integer("user_id")
+export const subscriptionsTable = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
-    .notNull()
-    .$onUpdate(() => new Date()),
+  plan: planEnum("plan").notNull(),
+  status: subscriptionStatusEnum("status").notNull().default("active"),
+  stripe_subscription_id: text("stripe_subscription_id").unique(),
+  stripe_customer_id: text("stripe_customer_id"),
+  current_period_start: timestamp("current_period_start"),
+  current_period_end: timestamp("current_period_end"),
+  trial_ends_at: timestamp("trial_ends_at"),
+  cancelled_at: timestamp("cancelled_at"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
+
+// ============================================
+// CAMPAIGNS (NEW!)
+// ============================================
+
+export const campaignsTable = pgTable("campaigns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  // project_id: uuid("project_id")
+  //   .notNull()
+  //   .references(() => projectsTable.id, { onDelete: "cascade" }),
+  name: text("name"), // "Wireless Headphones Campaign"
+  description: text("description"),
+  product_image_url: text("product_image_url").notNull(),
+
+  videos_generated: integer("videos_generated").notNull().default(0),
+
+  // Optional: Analytics aggregation (for future)
+  total_views: integer("total_views").default(0),
+  total_likes: integer("total_likes").default(0),
+  total_shares: integer("total_shares").default(0),
+
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// PROJECTS & PRODUCTS
+// ============================================
+
+export const projectsTable = pgTable("projects", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+
+  // NEW: Link to campaign
+  campaign_id: uuid("campaign_id").references(() => campaignsTable.id, {
+    onDelete: "cascade",
+  }),
+
+  name: text("name"),
+  description: text("description"),
+  product_image_url: text("product_image_url").notNull(),
+  selected_styles: videoStyleEnum("selected_styles").array().notNull(),
+  language: text("language").notNull().default("en"),
+  status: projectStatusEnum("status").notNull().default("processing"),
+  quality: text("quality").notNull(),
+  duration: integer("duration"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// AI GENERATED VIDEOS
+// ============================================
+
+export const videosTable = pgTable("videos", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  project_id: uuid("project_id")
+    .notNull()
+    .references(() => projectsTable.id, { onDelete: "cascade" }),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  video_url: text("video_url").notNull(),
+  thumbnail_url: text("thumbnail_url"),
+  style: videoStyleEnum("style").notNull(),
+  caption: text("caption"),
+  hashtags: text("hashtags").array(),
+  metadata: jsonb("metadata"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================
+// SOCIAL MEDIA CONNECTIONS
+// ============================================
+
+export const socialConnectionsTable = pgTable("social_connections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  platform: platformEnum("platform").notNull(),
+  platform_user_id: text("platform_user_id").notNull(),
+  platform_username: text("platform_username"),
+  access_token: text("access_token").notNull(),
+  refresh_token: text("refresh_token"),
+  token_expires_at: timestamp("token_expires_at"),
+  is_active: boolean("is_active").notNull().default(true),
+  connected_at: timestamp("connected_at").notNull().defaultNow(),
+  last_used_at: timestamp("last_used_at"),
+});
+
+// ============================================
+// SCHEDULED & POSTED CONTENT
+// ============================================
+
+export const scheduledPostsTable = pgTable("scheduled_posts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  video_id: uuid("video_id")
+    .notNull()
+    .references(() => videosTable.id, { onDelete: "cascade" }),
+  connection_id: uuid("connection_id")
+    .notNull()
+    .references(() => socialConnectionsTable.id, { onDelete: "cascade" }),
+  platform: platformEnum("platform").notNull(),
+  scheduled_for: timestamp("scheduled_for").notNull(),
+  status: postStatusEnum("status").notNull().default("scheduled"),
+  caption: text("caption"),
+  hashtags: text("hashtags").array(),
+  platform_post_id: text("platform_post_id"),
+  platform_url: text("platform_url"),
+  error_message: text("error_message"),
+  posted_at: timestamp("posted_at"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// ANALYTICS & PERFORMANCE
+// ============================================
+
+export const postAnalyticsTable = pgTable("post_analytics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scheduled_post_id: uuid("scheduled_post_id")
+    .notNull()
+    .references(() => scheduledPostsTable.id, { onDelete: "cascade" }),
+  views: integer("views").default(0),
+  likes: integer("likes").default(0),
+  comments: integer("comments").default(0),
+  shares: integer("shares").default(0),
+  engagement_rate: integer("engagement_rate").default(0),
+  last_synced_at: timestamp("last_synced_at"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================
+// USAGE TRACKING
+// ============================================
+
+export const usageLogsTable = pgTable("usage_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  credits_used: integer("credits_used").default(0),
+  metadata: jsonb("metadata"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================
+// TYPE EXPORTS
+// ============================================
 
 export type InsertUser = typeof usersTable.$inferInsert;
 export type SelectUser = typeof usersTable.$inferSelect;
 
-export type InsertPost = typeof postsTable.$inferInsert;
-export type SelectPost = typeof postsTable.$inferSelect;
+export type InsertSubscription = typeof subscriptionsTable.$inferInsert;
+export type SelectSubscription = typeof subscriptionsTable.$inferSelect;
+
+export type InsertCampaign = typeof campaignsTable.$inferInsert;
+export type SelectCampaign = typeof campaignsTable.$inferSelect;
+
+export type InsertProject = typeof projectsTable.$inferInsert;
+export type SelectProject = typeof projectsTable.$inferSelect;
+
+export type InsertVideo = typeof videosTable.$inferInsert;
+export type SelectVideo = typeof videosTable.$inferSelect;
+
+export type InsertSocialConnection = typeof socialConnectionsTable.$inferInsert;
+export type SelectSocialConnection = typeof socialConnectionsTable.$inferSelect;
+
+export type InsertScheduledPost = typeof scheduledPostsTable.$inferInsert;
+export type SelectScheduledPost = typeof scheduledPostsTable.$inferSelect;
+
+export type InsertPostAnalytics = typeof postAnalyticsTable.$inferInsert;
+export type SelectPostAnalytics = typeof postAnalyticsTable.$inferSelect;
+
+export type InsertUsageLog = typeof usageLogsTable.$inferInsert;
+export type SelectUsageLog = typeof usageLogsTable.$inferSelect;
