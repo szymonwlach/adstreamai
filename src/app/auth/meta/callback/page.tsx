@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+export const dynamic = "force-dynamic";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
-export default function MetaCallback() {
+function MetaCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState("Connecting your Instagram...");
@@ -114,7 +115,7 @@ export default function MetaCallback() {
     };
 
     handleMetaCallback();
-  }, []); // Pusty array - wykonaj tylko raz przy montowaniu
+  }, [searchParams, router]); // Add dependencies
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -145,5 +146,19 @@ export default function MetaCallback() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function MetaCallback() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <MetaCallbackContent />
+    </Suspense>
   );
 }
