@@ -73,7 +73,7 @@ export const DashboardNavbar = () => {
                 Billing
               </a>
               <a
-                href="#connect"
+                href="/dashboard#connect"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Connection

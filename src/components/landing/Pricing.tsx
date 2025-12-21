@@ -17,11 +17,11 @@ const tiers = [
   {
     name: "Growth",
     icon: Zap,
-    price: "49",
-    credits: "25",
+    price: "39",
+    credits: "150",
     description: "Perfect for solopreneurs & small brands",
     features: [
-      "25 AI video credits/month",
+      "150  credits/month",
       "All AI styles (UGC, Trend, Educational)",
       "Post to all 6+ platforms",
       "Smart scheduling & autoposting",
@@ -34,11 +34,11 @@ const tiers = [
   {
     name: "Business",
     icon: Sparkles,
-    price: "195",
-    credits: "100",
+    price: "199",
+    credits: "500",
     description: "For scaling brands & agencies",
     features: [
-      "100 AI video credits/month",
+      "500 AI video credits/month",
       "Priority AI generation (faster)",
       "Advanced analytics & insights",
       "Custom branding removal",
@@ -53,10 +53,10 @@ const tiers = [
     name: "Enterprise",
     icon: Crown,
     price: "499",
-    credits: "300",
+    credits: "2000",
     description: "For established businesses at scale",
     features: [
-      "300 AI video credits/month",
+      "2000 AI video credits/month",
       "White-label options",
       "API access",
       "Real-time dashboard",
@@ -111,7 +111,8 @@ export const Pricing = () => {
               isDashboard ? "mb-12" : ""
             }`}
           >
-            5 credits = 1 AI-generated video. Start free, upgrade when ready.
+            15 credit = 1 standard 10s AI-generated video. Start free, upgrade
+            when ready.
           </p>
         </div>
 
@@ -136,7 +137,7 @@ export const Pricing = () => {
                     <p className="text-muted-foreground mb-4">
                       Get{" "}
                       <span className="font-bold text-foreground text-lg">
-                        5 free video credits
+                        30 free credits
                       </span>{" "}
                       to try AdStreamAI. No credit card, no time limit.
                       <br />
@@ -148,7 +149,7 @@ export const Pricing = () => {
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Check className="w-4 h-4 text-primary" />
-                        <span>5 credits forever</span>
+                        <span>2 credits forever</span>
                       </div>
                       <span className="text-border hidden sm:inline">•</span>
                       <div className="flex items-center gap-1.5">
@@ -267,9 +268,9 @@ export const Pricing = () => {
             • Smart optimization • Regular updates
           </p>
           <p className="text-sm text-muted-foreground">
-            Need 300+ videos/month or custom features?{" "}
+            Need 1000+ videos/month or custom features?{" "}
             <a
-              href="#contact"
+              href="/contact"
               className="text-primary hover:underline font-semibold"
             >
               Contact sales for Enterprise+

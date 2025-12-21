@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Link2,
@@ -9,35 +9,310 @@ import {
   TrendingUp,
   Video,
   Calendar,
-  Plus,
   ExternalLink,
   Sparkles,
   Crown,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
+    null
+  );
   const router = useRouter();
 
   const platforms = [
-    { id: "tiktok", name: "TikTok", icon: "🎵", color: "bg-pink-500" },
     { id: "instagram", name: "Instagram", icon: "📸", color: "bg-purple-500" },
+    { id: "tiktok", name: "TikTok", icon: "🎵", color: "bg-pink-500" },
     { id: "facebook", name: "Facebook", icon: "👥", color: "bg-blue-500" },
-    { id: "youtube", name: "YouTube Shorts", icon: "▶️", color: "bg-red-500" },
-    { id: "linkedin", name: "LinkedIn", icon: "💼", color: "bg-blue-700" },
+    {
+      id: "youtube_shorts",
+      name: "YouTube Shorts",
+      icon: "▶️",
+      color: "bg-red-500",
+    },
   ];
 
-  const toggleConnection = (platformId: string) => {
-    setConnectedPlatforms((prev) =>
-      prev.includes(platformId)
-        ? prev.filter((id) => id !== platformId)
-        : [...prev, platformId]
-    );
+  useEffect(() => {
+    console.log("📍 Dashboard page loaded");
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        console.log("❌ No user found, redirecting to auth");
+        router.push("/auth");
+      } else {
+        console.log("✅ User logged in:", user.id);
+        checkConnectedPlatforms();
+      }
+    });
+
+    // ✅ DODANE: Check for connection success messages
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("youtube")) {
+      const status = params.get("youtube");
+      if (status === "connected") {
+        setTimeout(() => {
+          alert(
+            "🎉 YouTube connected successfully!\n\nYou can now upload videos to YouTube Shorts."
+          );
+        }, 500);
+        // Clean URL
+        window.history.replaceState({}, "", "/dashboard#connect");
+      }
+    }
+    if (params.has("error")) {
+      const error = params.get("error");
+      setTimeout(() => {
+        alert(`❌ Connection failed: ${error}`);
+      }, 500);
+      window.history.replaceState({}, "", "/dashboard#connect");
+    }
+  }, []);
+
+  const checkConnectedPlatforms = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/connections?userId=${user.id}`);
+
+      if (!response.ok) {
+        console.error("Failed to fetch connections");
+        setLoading(false);
+        return;
+      }
+
+      const { connections } = await response.json();
+
+      const connectedPlatformIds = connections.map(
+        (conn: any) => conn.platform
+      );
+      setConnectedPlatforms(connectedPlatformIds);
+    } catch (error) {
+      console.error("Error checking connections:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectInstagram = async () => {
+    setConnectingPlatform("instagram");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const redirectUri = `${baseUrl}/auth/meta/callback`;
+
+      console.log("🔍 Meta Redirect URI:", redirectUri);
+
+      if (
+        !redirectUri.startsWith("http://") &&
+        !redirectUri.startsWith("https://")
+      ) {
+        console.error("❌ Invalid redirect URI:", redirectUri);
+        alert(
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+        );
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const state = user.id;
+
+      const scopes = [
+        "pages_show_list",
+        "instagram_basic",
+        "instagram_content_publish",
+        "pages_read_engagement",
+        "business_management",
+      ].join(",");
+
+      console.log("🔑 Using scopes for Instagram posting:", scopes);
+
+      const clientId = process.env.NEXT_PUBLIC_META_APP_ID;
+      if (!clientId) {
+        console.error("❌ NEXT_PUBLIC_META_APP_ID not configured!");
+        alert("Meta App ID is not configured. Check your .env file.");
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const authUrl =
+        `https://www.facebook.com/v21.0/dialog/oauth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${scopes}&` +
+        `state=${state}&` +
+        `response_type=code`;
+
+      console.log("🚀 Redirecting to Meta OAuth:", authUrl);
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error("Error connecting Instagram:", error);
+      setConnectingPlatform(null);
+    }
+  };
+
+  const connectFacebook = async () => {
+    setConnectingPlatform("facebook");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
+      const hasInstagram = connectedPlatforms.includes("instagram");
+
+      if (!hasInstagram) {
+        alert(
+          "⚠️ Please connect Instagram first!\n\nFacebook posting requires Instagram connection with a Facebook Page."
+        );
+        setConnectingPlatform(null);
+        return;
+      }
+
+      console.log("🔗 Connecting Facebook using Instagram credentials...");
+
+      const response = await fetch("/api/connect-facebook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Failed to connect Facebook");
+        setConnectingPlatform(null);
+        return;
+      }
+
+      console.log("✅ Facebook connected successfully!");
+
+      await checkConnectedPlatforms();
+      setConnectingPlatform(null);
+
+      alert(
+        "🎉 Facebook connected successfully!\n\nYou can now post videos to your Facebook Page."
+      );
+    } catch (error) {
+      console.error("❌ Error connecting Facebook:", error);
+      alert("Failed to connect Facebook. Please try again.");
+      setConnectingPlatform(null);
+    }
+  };
+
+  // ✅ NOWA FUNKCJA: Connect YouTube
+  const connectYouTube = async () => {
+    setConnectingPlatform("youtube_shorts");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const redirectUri = `${baseUrl}/api/auth/youtube/callback`;
+
+      console.log("🔍 YouTube Redirect URI:", redirectUri);
+
+      if (
+        !redirectUri.startsWith("http://") &&
+        !redirectUri.startsWith("https://")
+      ) {
+        console.error("❌ Invalid redirect URI:", redirectUri);
+        alert(
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+        );
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const state = user.id;
+
+      // YouTube OAuth Scopes
+      const scopes = [
+        "https://www.googleapis.com/auth/youtube.upload",
+        "https://www.googleapis.com/auth/youtube.readonly",
+        "https://www.googleapis.com/auth/youtube.force-ssl",
+      ].join(" ");
+
+      console.log("🔑 Using YouTube scopes:", scopes);
+
+      const clientId = process.env.NEXT_PUBLIC_YOUTUBE_CLIENT_ID;
+      if (!clientId) {
+        console.error("❌ NEXT_PUBLIC_YOUTUBE_CLIENT_ID not configured!");
+        alert("YouTube Client ID is not configured. Check your .env file.");
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const authUrl =
+        `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `scope=${encodeURIComponent(scopes)}&` +
+        `state=${state}&` +
+        `response_type=code&` +
+        `access_type=offline&` + // Get refresh token
+        `prompt=consent`; // Force consent screen to get refresh token
+
+      console.log("🚀 Redirecting to YouTube OAuth:", authUrl);
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error("Error connecting YouTube:", error);
+      setConnectingPlatform(null);
+    }
+  };
+
+  const handlePlatformClick = async (platformId: string) => {
+    if (connectedPlatforms.includes(platformId)) {
+      // TODO: Pokaż modal z opcjami (disconnect, view details)
+      return;
+    }
+
+    switch (platformId) {
+      case "instagram":
+        await connectInstagram();
+        break;
+      case "facebook":
+        await connectFacebook();
+        break;
+      case "tiktok":
+        alert("TikTok coming soon!");
+        break;
+      case "youtube_shorts":
+        await connectYouTube(); // ✅ ZMIENIONE
+        break;
+    }
   };
 
   const stats = {
@@ -88,7 +363,6 @@ const Dashboard = () => {
               multiple styles. Generate professional ads in minutes.
             </p>
 
-            {/* Opcja 1: Gradient button z animacją */}
             <Button
               size="lg"
               className="w-full gap-2 h-12 text-base relative overflow-hidden bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 group/btn"
@@ -269,7 +543,7 @@ const Dashboard = () => {
             </Badge>
           </div>
 
-          {connectedPlatforms.length === 0 && (
+          {!loading && connectedPlatforms.length === 0 && (
             <Card className="p-10 mb-6 bg-muted/30 border-2 border-dashed border-border text-center">
               <Link2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-2xl font-bold mb-2">
@@ -282,9 +556,11 @@ const Dashboard = () => {
             </Card>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {platforms.map((platform) => {
               const isConnected = connectedPlatforms.includes(platform.id);
+              const isConnecting = connectingPlatform === platform.id;
+
               return (
                 <Card
                   key={platform.id}
@@ -293,17 +569,19 @@ const Dashboard = () => {
                       ? "border-2 border-primary bg-primary/10 hover:bg-primary/15 shadow-md"
                       : "border-2 border-border hover:border-primary/50 hover:shadow-md"
                   }`}
-                  onClick={() => toggleConnection(platform.id)}
+                  onClick={() =>
+                    !isConnecting && handlePlatformClick(platform.id)
+                  }
                 >
                   <div className="flex items-center gap-4 mb-4">
                     <div
-                      className={`w-16 h-16 ${platform.color} rounded-xl flex items-center justify-center text-3xl shadow-lg`}
+                      className={`w-14 h-14 ${platform.color} rounded-xl flex items-center justify-center text-2xl shadow-lg`}
                     >
                       {platform.icon}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-lg">{platform.name}</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <h3 className="font-bold text-base">{platform.name}</h3>
+                      <p className="text-xs text-muted-foreground">
                         {isConnected ? "Connected" : "Not connected"}
                       </p>
                     </div>
@@ -311,13 +589,27 @@ const Dashboard = () => {
 
                   {isConnected ? (
                     <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                      <Check className="w-5 h-5" />
+                      <Check className="w-4 h-4" />
                       <span>Active & Ready</span>
                     </div>
                   ) : (
-                    <Button variant="outline" className="w-full" size="sm">
-                      <Link2 className="w-4 h-4 mr-2" />
-                      Connect Account
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      disabled={isConnecting}
+                    >
+                      {isConnecting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <Link2 className="w-4 h-4 mr-2" />
+                          Connect
+                        </>
+                      )}
                     </Button>
                   )}
                 </Card>

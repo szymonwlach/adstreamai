@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +15,7 @@ import {
   Archive,
   TrendingUp,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import CaptionEditorModal from "@/components/my-ads/CaptionEditModal";
 
 interface Video {
   id: string;
@@ -55,28 +58,18 @@ interface Campaign {
 const MyContent = () => {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [campaignName, setCampaignName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(
     new Set()
   );
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [previewVideo, setPreviewVideo] = useState<any>(null);
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>(
-    {}
-  );
-  const [useMockData, setUseMockData] = useState(false);
-
-  const connectedPlatforms = ["tiktok", "instagram"];
-
-  const platforms = [
-    { id: "tiktok", name: "TikTok", icon: "🎵", color: "bg-pink-500" },
-    { id: "instagram", name: "Instagram", icon: "📸", color: "bg-purple-500" },
-    { id: "facebook", name: "Facebook", icon: "👥", color: "bg-blue-500" },
-    { id: "youtube", name: "YouTube Shorts", icon: "▶️", color: "bg-red-500" },
-    { id: "linkedin", name: "LinkedIn", icon: "💼", color: "bg-blue-700" },
-  ];
+  const [userId, setUserId] = useState<string | null>(null);
+  const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showCaptionModal, setShowCaptionModal] = useState(false);
+  const [selectedVideoForCaption, setSelectedVideoForCaption] =
+    useState<any>(null);
+  const [loadingCaptions, setLoadingCaptions] = useState(false);
 
   const styleMapping: Record<
     string,
@@ -118,7 +111,6 @@ const MyContent = () => {
     },
   };
 
-  // Generate unique color for each video based on index
   const getVideoColorScheme = (index: number) => {
     const colorSchemes = [
       {
@@ -166,7 +158,11 @@ const MyContent = () => {
         text: "text-white",
         num: "bg-fuchsia-600",
       },
-      { bg: "from-sky-500 to-blue-500", text: "text-white", num: "bg-sky-600" },
+      {
+        bg: "from-sky-500 to-blue-500",
+        text: "text-white",
+        num: "bg-sky-600",
+      },
       {
         bg: "from-amber-500 to-orange-500",
         text: "text-white",
@@ -181,7 +177,6 @@ const MyContent = () => {
     return colorSchemes[index % colorSchemes.length];
   };
 
-  // Generate unique pattern/icon for each video
   const getVideoIcon = (index: number) => {
     const icons = [
       "🎬",
@@ -200,12 +195,10 @@ const MyContent = () => {
     return icons[index % icons.length];
   };
 
-  // Helper to get videos from campaign (supports both old projects and new videos format)
   const getVideosFromCampaign = (campaign: Campaign): Video[] => {
     if (campaign.videos && campaign.videos.length > 0) {
       return campaign.videos;
     }
-    // Fallback: convert projects to videos if old format
     if (campaign.projects && campaign.projects.length > 0) {
       const allVideos: Video[] = [];
       campaign.projects.forEach((project: any) => {
@@ -225,15 +218,39 @@ const MyContent = () => {
     }
     return [];
   };
-  // const getProductName =async  () => {
-  // await fetch('getProductName', {
-  //   method: 'POST',
-  //   body: JSON.stringify({ campaignName }),
-  // })
-  // }
-  // useEffect( () => {
 
-  // }, []);
+  const getProcessingProjects = (campaign: Campaign): any[] => {
+    if (!campaign.projects) return [];
+    return campaign.projects.filter((p: any) => p.status === "processing");
+  };
+
+  const fetchConnectedPlatforms = async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        return;
+      }
+      setUserId(session.user.id);
+
+      const response = await fetch(
+        `/api/connections?userId=${session.user.id}`
+      );
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (data.connections) {
+        const platforms = data.connections.map((c: any) => c.platform);
+        setConnectedPlatforms(platforms);
+      }
+    } catch (error) {
+      console.error("Error fetching connected platforms:", error);
+    }
+  };
+
   const fetchCampaigns = async (showLoadingState = true) => {
     try {
       if (showLoadingState) {
@@ -243,104 +260,98 @@ const MyContent = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
       if (!session?.user) {
-        console.error("No user session");
         setLoading(false);
         return;
       }
 
-      console.log("📤 Fetching campaigns for user:", session.user.id);
-
       const response = await fetch(
         `/api/getCampaigns?user_id=${session.user.id}`
       );
-
       if (!response.ok) {
-        const error = await response.json();
-        console.error("❌ API error:", error);
         setLoading(false);
         return;
       }
 
       const data = await response.json();
-      console.log("✅ Fetched campaigns:", data.campaigns);
-
       if (data.campaigns.length !== 0) {
-        setCampaigns(data.campaigns);
+        // Fix product_image_url - handle comma-separated URLs or arrays
+        const fixedCampaigns = data.campaigns.map((campaign: Campaign) => {
+          console.log(
+            "🔍 Original product_image_url:",
+            campaign.product_image_url
+          );
+
+          let imageUrl = campaign.product_image_url;
+
+          // If it's a string with commas, split and take first
+          if (typeof imageUrl === "string" && imageUrl.includes(",")) {
+            imageUrl = imageUrl.split(",")[0].trim();
+          }
+          // If it's an array, take the first element
+          else if (Array.isArray(imageUrl)) {
+            imageUrl = imageUrl[0];
+          }
+
+          // If it's still not a valid string or is empty, use a placeholder
+          if (
+            !imageUrl ||
+            typeof imageUrl !== "string" ||
+            imageUrl.trim() === ""
+          ) {
+            console.warn(
+              "⚠️ Invalid image URL for campaign:",
+              campaign.name,
+              imageUrl
+            );
+            imageUrl = "/placeholder-product.png";
+          }
+
+          console.log("✅ Fixed product_image_url:", imageUrl);
+
+          return {
+            ...campaign,
+            product_image_url: imageUrl,
+          };
+        });
+        setCampaigns(fixedCampaigns);
       } else {
         setCampaigns([]);
       }
-
       setLoading(false);
     } catch (error) {
-      console.error("❌ Error fetching campaigns:", error);
+      console.error("Error fetching campaigns:", error);
       setCampaigns([]);
       setLoading(false);
     }
   };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchCampaigns(false);
+    setTimeout(() => setIsRefreshing(false), 500);
+    toast.success("Content refreshed!");
+  };
+
   useEffect(() => {
+    fetchConnectedPlatforms();
     fetchCampaigns();
 
-    // Also fetch if user just returned from generate-ad page
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("refresh")) {
-      const timeout = setTimeout(() => fetchCampaigns(), 1000);
-      return () => clearTimeout(timeout);
-    }
+    // First auto-refresh after 10 seconds
+    const initialRefreshTimeout = setTimeout(() => {
+      fetchCampaigns(false);
+    }, 10000); // 10 seconds
+
+    // Then auto-refresh every minute
+    const autoRefreshInterval = setInterval(() => {
+      fetchCampaigns(false);
+    }, 60000); // 1 minute = 60000ms
+
+    return () => {
+      clearTimeout(initialRefreshTimeout);
+      clearInterval(autoRefreshInterval);
+    };
   }, []);
-
-  // Polling for processing videos
-  useEffect(() => {
-    if (useMockData) return;
-
-    const hasProcessing = campaigns.some((c) =>
-      getVideosFromCampaign(c).some((v) => v.status === "processing")
-    );
-
-    if (!hasProcessing) return;
-
-    const interval = setInterval(() => {
-      console.log("🔄 Checking for updates...");
-      fetchCampaigns();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [campaigns, useMockData]);
-
-  // Simulate progress
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setVideoProgress((prev) => {
-        const updated = { ...prev };
-
-        campaigns.forEach((campaign) => {
-          getVideosFromCampaign(campaign).forEach((video) => {
-            if (video.status === "processing") {
-              const createdAt = new Date(video.created_at).getTime();
-              const elapsed = Date.now() - createdAt;
-              const seconds = elapsed / 1000;
-
-              let progress = 0;
-              if (seconds < 10) {
-                progress = Math.min(30, seconds * 3);
-              } else if (seconds < 40) {
-                progress = 30 + Math.min(60, (seconds - 10) * 2);
-              } else {
-                progress = 90;
-              }
-
-              updated[video.id] = Math.round(progress);
-            }
-          });
-        });
-
-        return updated;
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [campaigns]);
 
   const toggleCampaign = (campaignId: string) => {
     setExpandedCampaigns((prev) => {
@@ -355,34 +366,76 @@ const MyContent = () => {
   };
 
   const handleGenerateMore = (campaign: Campaign) => {
+    // Tylko campaign_id i prefill flag - reszta załaduje się z API
     router.push(
       `/dashboard/generate-ad?campaign_id=${campaign.id}&prefill=true`
     );
   };
 
-  const togglePlatform = (platformId: string) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platformId)
-        ? prev.filter((id) => id !== platformId)
-        : [...prev, platformId]
-    );
-  };
+  const handlePostNow = async (video: any, campaign: Campaign) => {
+    try {
+      setLoadingCaptions(true);
 
-  const handlePostNow = (videoId: string) => {
-    setSelectedVideo(videoId);
-    // Reset platform selection when opening post modal
-    setSelectedPlatforms([]);
-  };
+      // Pobierz prawdziwe AI captions z bazy danych
+      const response = await fetch(
+        `/api/get-video-captions?videoId=${video.id}`
+      );
 
-  const handleConfirmPost = async () => {
-    if (selectedPlatforms.length === 0) {
-      toast.error("Please select at least one platform");
-      return;
+      if (!response.ok) {
+        throw new Error("Failed to fetch video captions");
+      }
+
+      const data = await response.json();
+
+      console.log("✅ Loaded real AI captions:", data.captions);
+
+      setSelectedVideoForCaption({
+        ...video,
+        productName: campaign.name,
+        thumbnail: campaign.product_image_url,
+        ai_captions: data.captions,
+      });
+      setShowCaptionModal(true);
+    } catch (error) {
+      console.error("Error loading captions:", error);
+      toast.error("Failed to load video captions");
+    } finally {
+      setLoadingCaptions(false);
     }
+  };
 
-    toast.success(`Video scheduled to post on ${selectedPlatforms.join(", ")}`);
-    setSelectedVideo(null);
-    setSelectedPlatforms([]);
+  const handlePostWithCaptions = async (postData: any) => {
+    try {
+      toast.loading("Posting video...");
+      const response = await fetch("/api/post-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId: selectedVideoForCaption.id,
+          platforms: postData.platforms,
+          captions: postData.captions,
+          userId: userId,
+          options: {
+            facebookPostTypes: postData.facebookPostTypes,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to post video");
+      }
+
+      toast.dismiss();
+      toast.success("Video posted successfully!");
+
+      setShowCaptionModal(false);
+      setSelectedVideoForCaption(null);
+      fetchCampaigns(false);
+    } catch (error: any) {
+      toast.dismiss();
+      toast.error(error.message || "Failed to post video");
+    }
   };
 
   // Calculate stats
@@ -391,7 +444,6 @@ const MyContent = () => {
     0
   );
 
-  // Count projects with 'processing' status as generating
   const processingCount = campaigns.reduce((sum, c) => {
     const projectsCount = (c.projects || []).filter(
       (p: any) => p.status === "processing"
@@ -407,98 +459,112 @@ const MyContent = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <DashboardNavbar />
-        <div className="container mx-auto px-6 py-12 mt-20 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading your campaigns...</p>
-          </div>
+        <div className="container mx-auto px-4 py-12 mt-20 flex items-center justify-center">
+          <div className="text-white text-xl">Loading your campaigns...</div>
         </div>
-      </div>
-    );
-  }
-  {
-    loading && campaigns.length === 0 && (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card
-            key={i}
-            className="p-6 border-border bg-card animate-pulse flex flex-col gap-4"
-          >
-            <div className="flex gap-4">
-              <div className="w-32 h-32 bg-muted rounded-lg" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/2 bg-muted rounded" />
-                <div className="h-3 w-1/3 bg-muted rounded" />
-                <div className="h-3 w-2/3 bg-muted rounded" />
-              </div>
-            </div>
-            <div className="flex gap-4 mt-4">
-              <div className="h-6 w-16 bg-muted rounded" />
-              <div className="h-6 w-16 bg-muted rounded" />
-              <div className="h-6 w-16 bg-muted rounded" />
-            </div>
-          </Card>
-        ))}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 mt-[50px]">
       <DashboardNavbar />
 
-      <div className="container mx-auto px-6 py-12 mt-16">
+      {/* Manual Refresh Button - Fixed Position */}
+      <button
+        onClick={handleManualRefresh}
+        disabled={isRefreshing}
+        className="fixed right-8 top-28 z-50 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold border-2 border-cyan-400/30 hover:border-cyan-300/50 hover:scale-105 active:scale-95"
+        title="Refresh content"
+      >
+        <RefreshCw
+          className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
+        />
+        <span className="hidden sm:inline">Refresh</span>
+      </button>
+
+      <div className="container mx-auto px-4 py-8 pb-20">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-4xl font-bold mb-2">My Campaigns</h2>
-            <p className="text-muted-foreground">
+            <h1 className="text-4xl font-bold text-white mb-2">My Campaigns</h1>
+            <p className="text-gray-400">
               Manage your product campaigns and AI-generated videos
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push("/dashboard/generate-ad")}
-              className="gap-2"
-              size="lg"
-            >
-              <Plus className="w-5 h-5" />
-              New Campaign
-            </Button>
-          </div>
+          <Button
+            onClick={() => router.push("/dashboard/generate-ad")}
+            className="gap-2 bg-cyan-500 hover:bg-cyan-600"
+            size="lg"
+          >
+            <Plus className="w-5 h-5" />
+            New Campaign
+          </Button>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-6 bg-card border-border">
-            <p className="text-sm text-muted-foreground mb-2">
-              Total Campaigns
-            </p>
-            <p className="text-3xl font-bold">{campaigns.length}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-500 p-3 rounded-lg">
+                <Archive className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-blue-200 text-sm">Total Campaigns</p>
+                <p className="text-3xl font-bold text-white">
+                  {campaigns.length}
+                </p>
+              </div>
+            </div>
           </Card>
-          <Card className="p-6 bg-card border-border">
-            <p className="text-sm text-muted-foreground mb-2">Total Videos</p>
-            <p className="text-3xl font-bold">{totalVideos}</p>
+
+          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border-purple-500/30 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-500 p-3 rounded-lg">
+                <Sparkles className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-purple-200 text-sm">Total Videos</p>
+                <p className="text-3xl font-bold text-white">{totalVideos}</p>
+              </div>
+            </div>
           </Card>
-          <Card className="p-6 bg-card border-border">
-            <p className="text-sm text-muted-foreground mb-2">Generating</p>
-            <p className="text-3xl font-bold text-yellow-500">
-              {processingCount}
-            </p>
+
+          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border-orange-500/30 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-orange-500 p-3 rounded-lg">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-orange-200 text-sm">Generating</p>
+                <p className="text-3xl font-bold text-white">
+                  {processingCount}
+                </p>
+              </div>
+            </div>
           </Card>
-          <Card className="p-6 bg-card border-border">
-            <p className="text-sm text-muted-foreground mb-2">Ready to Post</p>
-            <p className="text-3xl font-bold text-blue-500">{readyCount}</p>
+
+          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/20 border-green-500/30 p-6">
+            <div className="flex items-center gap-4">
+              <div className="bg-green-500 p-3 rounded-lg">
+                <Check className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-green-200 text-sm">Ready to Post</p>
+                <p className="text-3xl font-bold text-white">{readyCount}</p>
+              </div>
+            </div>
           </Card>
         </div>
 
         {/* Campaigns List */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {campaigns.map((campaign) => {
             const isExpanded = expandedCampaigns.has(campaign.id);
             const campaignVideos = getVideosFromCampaign(campaign);
+            const processingProjects = getProcessingProjects(campaign);
             const processingVideos = campaignVideos.filter(
               (v) => v.status === "processing"
             );
@@ -509,303 +575,365 @@ const MyContent = () => {
             return (
               <Card
                 key={campaign.id}
-                className="bg-card border-border hover:border-primary transition-colors overflow-hidden"
+                className="bg-gray-800/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all"
               >
                 {/* Campaign Header */}
                 <div
                   className="p-6 cursor-pointer"
                   onClick={() => toggleCampaign(campaign.id)}
                 >
-                  <div className="flex gap-6">
+                  <div className="flex items-start justify-between">
                     {/* Thumbnail */}
-                    <div className="relative w-32 h-32 flex-shrink-0">
+                    <div className="flex gap-4 flex-1">
                       <img
                         src={campaign.product_image_url}
                         alt={campaign.name}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="w-24 h-24 rounded-lg object-cover"
+                        onError={(e) => {
+                          console.error(
+                            "❌ Image failed to load:",
+                            campaign.product_image_url
+                          );
+                          // Fallback to a colored div if image fails
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                          const fallback = document.createElement("div");
+                          fallback.className =
+                            "w-24 h-24 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-2xl font-bold";
+                          fallback.textContent = campaign.name
+                            .charAt(0)
+                            .toUpperCase();
+                          target.parentNode?.insertBefore(fallback, target);
+                        }}
                       />
-                    </div>
 
-                    {/* Campaign Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-bold">
-                              {campaign.name}
-                            </h3>
-                            <Badge variant="outline" className="gap-1">
-                              <Sparkles className="w-3 h-3" />
-                              {campaignVideos.length} videos
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                            {campaign.description &&
-                            campaign.description.trim() !== "" ? (
-                              campaign.description.slice(0, 100)
-                            ) : (
-                              <>
-                                <Sparkles className="w-3 h-3" />
-                                <span className="italic">
-                                  AI will generate description
-                                </span>
-                              </>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
+                      {/* Campaign Info */}
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="text-2xl font-bold text-white">
+                            {campaign.name}
+                          </h3>
+                          <Badge className="bg-purple-500 text-white">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            {campaignVideos.length} videos
+                          </Badge>
+                        </div>
+                        <p className="text-gray-400 mb-3">
+                          {campaign.description &&
+                          campaign.description.trim() !== "" ? (
+                            campaign.description.slice(0, 100)
+                          ) : (
+                            <>AI will generate description</>
+                          )}
+                        </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
                             Created{" "}
                             {new Date(campaign.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                          )}
+                          </div>
                         </div>
                       </div>
 
-                      {/* Quick Stats */}
-                      <div className="flex items-center gap-6 text-sm">
-                        {processingVideos.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-yellow-500" />
-                            <span className="text-muted-foreground">
-                              {processingVideos.length} generating
-                            </span>
-                          </div>
-                        )}
-                        {readyVideos.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-blue-500" />
-                            <span className="text-muted-foreground">
-                              {readyVideos.length} ready to post
-                            </span>
-                          </div>
-                        )}
-                        {campaign.max_videos && (
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-primary" />
-                            <span className="text-muted-foreground">
-                              {campaignVideos.length}/{campaign.max_videos}{" "}
-                              limit
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="w-6 h-6 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-6 h-6 text-gray-400" />
+                      )}
                     </div>
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div className="flex gap-3 mt-4">
+                    {(processingVideos.length > 0 ||
+                      processingProjects.length > 0) && (
+                      <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
+                        <Clock className="w-3 h-3 mr-1" />
+                        {processingProjects.length +
+                          processingVideos.length}{" "}
+                        generating
+                      </Badge>
+                    )}
+                    {readyVideos.length > 0 && (
+                      <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                        <Check className="w-3 h-3 mr-1" />
+                        {readyVideos.length} ready to post
+                      </Badge>
+                    )}
+                    {campaign.max_videos && (
+                      <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                        <TrendingUp className="w-3 h-3 mr-1" />
+                        {campaignVideos.length}/{campaign.max_videos} limit
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
-                {/* Expanded Content - Videos */}
+                {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="border-t border-border bg-muted/20">
-                    <div className="p-6 space-y-4">
-                      {/* Generate More Button */}
-                      <div className="flex justify-end mb-4">
-                        <Button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGenerateMore(campaign);
-                          }}
-                          variant="outline"
-                          className="gap-2"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          Generate More Videos
-                        </Button>
-                      </div>
+                  <div className="px-6 pb-6 border-t border-gray-700">
+                    {/* Generate More Button */}
+                    <div className="py-4">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateMore(campaign);
+                        }}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Generate More Videos
+                      </Button>
+                    </div>
 
-                      {/* Videos Grid */}
-                      {campaignVideos.length > 0 ? (
-                        <div className="space-y-3">
+                    {/* Processing Projects */}
+                    {processingProjects.length > 0 && (
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="mb-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="text-white font-semibold flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-orange-400" />
+                                Generating Videos ({processingProjects.length})
+                              </h4>
+                            </div>
+
+                            {/* Info banner */}
+                            <div className="bg-orange-500/20 border border-orange-500/40 rounded-lg p-3 flex items-center gap-3">
+                              <div className="bg-orange-500 p-2 rounded-lg">
+                                <Clock className="w-5 h-5 text-white animate-spin" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-orange-200 font-semibold text-sm">
+                                  AI is generating your videos
+                                </p>
+                                <p className="text-orange-300/80 text-xs">
+                                  Average time: 2-4 minutes per video •
+                                  Auto-refresh every minute or click Refresh
+                                  button
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className="bg-orange-500/10 text-orange-300 border-orange-500/30 flex items-center gap-1"
+                          >
+                            <Info className="w-3 h-3" />
+                            ~2-4 min each
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {processingProjects.map(
+                            (project: any, idx: number) => {
+                              const colorScheme = getVideoColorScheme(idx);
+                              const videoIcon = getVideoIcon(idx);
+                              return (
+                                <Card
+                                  key={project.id}
+                                  className="bg-gray-900/50 border-orange-500/30 overflow-hidden"
+                                >
+                                  <div className="relative">
+                                    <div
+                                      className={`aspect-[9/16] bg-gradient-to-br ${colorScheme.bg} flex items-center justify-center`}
+                                    >
+                                      <div className="text-6xl animate-pulse">
+                                        {videoIcon}
+                                      </div>
+                                    </div>
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                      <div className="text-center text-white">
+                                        <Clock className="w-8 h-8 mx-auto mb-2 animate-spin" />
+                                        <p className="text-sm font-medium">
+                                          Generating...
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="p-3">
+                                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 mb-2">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      Processing
+                                    </Badge>
+                                    <div className="text-xs text-gray-400">
+                                      {project.quality} • {project.duration}s •{" "}
+                                      {project.language?.toUpperCase() || "EN"}
+                                    </div>
+                                  </div>
+                                </Card>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ready Videos */}
+                    {campaignVideos.length > 0 && (
+                      <div>
+                        <h4 className="text-white font-semibold mb-3">
+                          Generated Videos ({campaignVideos.length})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {campaignVideos.map((video, videoIndex) => {
+                            const videoNumber =
+                              campaignVideos.length - videoIndex;
                             const colorScheme = getVideoColorScheme(videoIndex);
                             const videoIcon = getVideoIcon(videoIndex);
+
                             return (
                               <Card
                                 key={video.id}
-                                className={`p-4 bg-card border-2 transition-all ${
-                                  styleMapping[video.style]?.borderColor ||
-                                  "border-border"
-                                }`}
+                                className="bg-gray-900/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all"
                               >
-                                <div className="flex gap-4">
-                                  {/* Video Preview */}
+                                {/* Video Preview */}
+                                <div
+                                  className="relative aspect-[9/16] cursor-pointer group"
+                                  onClick={() =>
+                                    setPreviewVideo({
+                                      ...video,
+                                      productName: campaign.name,
+                                      thumbnail: campaign.product_image_url,
+                                      styleName:
+                                        styleMapping[video.style]?.name ||
+                                        video.style,
+                                      styleIcon:
+                                        styleMapping[video.style]?.icon || "🎬",
+                                      videoNumber: videoIndex + 1,
+                                      colorScheme: colorScheme,
+                                    })
+                                  }
+                                >
+                                  {video.video_url ? (
+                                    <video
+                                      src={video.video_url}
+                                      className="w-full h-full object-cover"
+                                      muted
+                                    />
+                                  ) : (
+                                    <div
+                                      className={`w-full h-full bg-gradient-to-br ${colorScheme.bg} flex items-center justify-center`}
+                                    >
+                                      <div className="text-6xl">
+                                        {videoIcon}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Number Badge */}
                                   <div
-                                    className={`relative w-32 h-32 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all bg-gradient-to-br ${colorScheme.bg}`}
-                                    onClick={() =>
-                                      setPreviewVideo({
-                                        ...video,
-                                        productName: campaign.name,
-                                        thumbnail: campaign.product_image_url,
-                                        styleName:
-                                          styleMapping[video.style]?.name ||
-                                          video.style,
-                                        styleIcon:
-                                          styleMapping[video.style]?.icon ||
-                                          "🎬",
-                                        videoNumber: videoIndex + 1,
-                                        colorScheme: colorScheme,
-                                      })
-                                    }
+                                    className={`absolute top-2 left-2 ${colorScheme.num} text-white px-3 py-1 rounded-full font-bold text-sm`}
                                   >
-                                    {video.video_url ? (
-                                      <video
-                                        src={video.video_url}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center">
-                                        <span className="text-4xl opacity-70">
-                                          {videoIcon}
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    {/* HUGE NUMBER BADGE */}
-                                    <div className="absolute bottom-1 left-1">
-                                      <div
-                                        className={`${colorScheme.num} text-white font-black px-2 py-1 rounded text-lg shadow-xl border-2 border-white`}
-                                      >
-                                        #{videoIndex + 1}
-                                      </div>
-                                    </div>
-
-                                    {/* Dark overlay on bottom for number readability */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none" />
-
-                                    {/* Style Icon Top Right */}
-                                    <div className="absolute top-1 right-1 z-20">
-                                      <Badge
-                                        className={`text-xs font-bold ${
-                                          styleMapping[video.style]?.badgeBg ||
-                                          "bg-primary"
-                                        }`}
-                                      >
-                                        {styleMapping[video.style]?.icon ||
-                                          "🎬"}
-                                      </Badge>
-                                    </div>
+                                    #{videoNumber}
                                   </div>
 
-                                  {/* Video Info */}
-                                  <div className="flex-1 flex flex-col justify-between">
-                                    <div>
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <Badge
-                                          className={`text-xs font-semibold ${
-                                            video.status === "processing"
-                                              ? "bg-yellow-500 text-black"
-                                              : video.status === "ready"
-                                              ? "bg-blue-500 text-white"
-                                              : "bg-red-500 text-white"
-                                          }`}
-                                        >
-                                          {video.status === "processing" &&
-                                            "⏳ Generating"}
-                                          {video.status === "ready" &&
-                                            "✓ Ready"}
-                                          {video.status === "failed" &&
-                                            "✗ Failed"}
-                                        </Badge>
-                                        <Badge
-                                          variant="outline"
-                                          className={`gap-1 ${
-                                            styleMapping[video.style]
-                                              ?.borderColor
-                                              ? styleMapping[video.style]
-                                                  ?.badgeBg
-                                              : ""
-                                          }`}
-                                        >
-                                          <span>
-                                            {styleMapping[video.style]?.icon ||
-                                              "🎬"}
-                                          </span>
-                                          {styleMapping[video.style]?.name ||
-                                            video.style}
-                                        </Badge>
-                                        <Badge className="bg-primary/20 text-primary gap-1">
-                                          Video #{videoIndex + 1}
-                                        </Badge>
-                                      </div>
-                                      <p className="text-xs text-muted-foreground">
-                                        {video.quality} • {video.duration}s •{" "}
-                                        {video.language?.toUpperCase() || "EN"}{" "}
-                                        •{" "}
-                                        {new Date(
-                                          video.created_at
-                                        ).toLocaleDateString()}
-                                      </p>
-                                    </div>
+                                  {/* Style Icon */}
+                                  <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-xl">
+                                    {styleMapping[video.style]?.icon || "🎬"}
+                                  </div>
 
-                                    {/* Status/Progress */}
+                                  {/* Dark overlay gradient */}
+                                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
+                                </div>
+
+                                {/* Video Info */}
+                                <div className="p-3">
+                                  <div className="flex items-center gap-2 mb-2">
                                     {video.status === "processing" && (
-                                      <div className="mt-2">
-                                        <div className="w-full bg-muted rounded-full h-1.5 mb-1">
-                                          <div
-                                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                                            style={{
-                                              width: `${
-                                                videoProgress[video.id] || 0
-                                              }%`,
-                                            }}
-                                          />
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                          {videoProgress[video.id] || 0}%
-                                          complete
-                                        </p>
+                                      <Badge className="bg-orange-500/20 text-orange-300">
+                                        ⏳ Generating
+                                      </Badge>
+                                    )}
+                                    {video.status === "ready" && (
+                                      <Badge className="bg-green-500/20 text-green-300">
+                                        ✓ Ready
+                                      </Badge>
+                                    )}
+                                    {video.status === "failed" && (
+                                      <Badge className="bg-red-500/20 text-red-300">
+                                        ✗ Failed
+                                      </Badge>
+                                    )}
+                                    <Badge
+                                      className={
+                                        styleMapping[video.style]?.badgeBg
+                                      }
+                                    >
+                                      {styleMapping[video.style]?.icon || "🎬"}{" "}
+                                      {styleMapping[video.style]?.name ||
+                                        video.style}
+                                    </Badge>
+                                  </div>
+
+                                  <p className="text-white font-medium mb-1">
+                                    Video #{videoNumber}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mb-3">
+                                    {video.quality} • {video.duration}s •{" "}
+                                    {video.language?.toUpperCase() || "EN"} •{" "}
+                                    {new Date(
+                                      video.created_at
+                                    ).toLocaleDateString()}
+                                  </p>
+
+                                  {/* Actions */}
+                                  {video.status === "ready" &&
+                                    video.video_url && (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="flex-1"
+                                          onClick={() =>
+                                            setPreviewVideo({
+                                              ...video,
+                                              productName: campaign.name,
+                                              thumbnail:
+                                                campaign.product_image_url,
+                                            })
+                                          }
+                                        >
+                                          <Eye className="w-3 h-3 mr-1" />
+                                          Preview
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          className="flex-1"
+                                          onClick={() =>
+                                            handlePostNow(video, campaign)
+                                          }
+                                          disabled={loadingCaptions}
+                                        >
+                                          {loadingCaptions ? (
+                                            <>
+                                              <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                              Loading...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Send className="w-3 h-3 mr-1" />
+                                              Post
+                                            </>
+                                          )}
+                                        </Button>
                                       </div>
                                     )}
-
-                                    {/* Actions */}
-                                    {video.status === "ready" &&
-                                      video.video_url && (
-                                        <div className="flex gap-2 mt-2">
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="gap-2 flex-1"
-                                            onClick={() =>
-                                              setPreviewVideo({
-                                                ...video,
-                                                productName: campaign.name,
-                                                thumbnail:
-                                                  campaign.product_image_url,
-                                              })
-                                            }
-                                          >
-                                            <Eye className="w-3 h-3" />
-                                            Preview
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            className="gap-2 flex-1"
-                                            onClick={() =>
-                                              handlePostNow(video.id)
-                                            }
-                                          >
-                                            <Send className="w-3 h-3" />
-                                            Post
-                                          </Button>
-                                        </div>
-                                      )}
-                                  </div>
                                 </div>
                               </Card>
                             );
                           })}
                         </div>
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
+                      </div>
+                    )}
+
+                    {campaignVideos.length === 0 &&
+                      processingProjects.length === 0 && (
+                        <div className="text-center py-8 text-gray-400">
+                          <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
                           No videos yet. Generate some to get started!
                         </div>
                       )}
-                    </div>
                   </div>
                 )}
               </Card>
@@ -815,13 +943,13 @@ const MyContent = () => {
 
         {/* Empty State */}
         {campaigns.length === 0 && (
-          <Card className="p-12 text-center bg-card border-border border-dashed">
+          <Card className="bg-gray-800/50 border-gray-700 p-12 text-center">
             <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🎬</span>
-              </div>
-              <h3 className="text-2xl font-bold mb-2">No campaigns yet</h3>
-              <p className="text-muted-foreground mb-6">
+              <div className="text-6xl mb-4">🎬</div>
+              <h3 className="text-2xl font-bold text-white mb-2">
+                No campaigns yet
+              </h3>
+              <p className="text-gray-400 mb-6">
                 Create your first campaign and start generating AI-powered video
                 ads
               </p>
@@ -841,63 +969,70 @@ const MyContent = () => {
       {/* Preview Modal */}
       {previewVideo && (
         <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setPreviewVideo(null)}
         >
-          <Card
-            className="max-w-2xl w-full p-6"
+          <div
+            className="bg-gray-900 rounded-2xl max-w-md w-full overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-xl font-bold">
+            <div className="p-4 border-b border-gray-700">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white">
                     {previewVideo.productName}
                   </h3>
-                  <Badge className="bg-primary/20 text-primary">
+                  <p className="text-sm text-gray-400">
                     Video #{previewVideo.videoNumber}
-                  </Badge>
+                  </p>
                 </div>
                 {previewVideo.styleName && (
-                  <Badge variant="outline" className="gap-1 mt-2">
-                    <span>{previewVideo.styleIcon}</span>
-                    {previewVideo.styleName}
+                  <Badge
+                    className={
+                      styleMapping[previewVideo.style]?.badgeBg ||
+                      "bg-purple-500"
+                    }
+                  >
+                    {previewVideo.styleIcon} {previewVideo.styleName}
                   </Badge>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setPreviewVideo(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white"
               >
-                <X className="w-5 h-5" />
-              </Button>
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
-            {previewVideo.video_url ? (
-              <video
-                src={previewVideo.video_url}
-                controls
-                autoPlay
-                className="w-full rounded-lg"
-              />
-            ) : (
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center relative">
-                {/* HUGE video number */}
-                <div className="text-9xl font-black text-primary/30">
-                  #{previewVideo.videoNumber}
+            <div className="aspect-[9/16] bg-black relative">
+              {previewVideo.video_url ? (
+                <video
+                  src={previewVideo.video_url}
+                  controls
+                  autoPlay
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div
+                  className={`w-full h-full bg-gradient-to-br ${previewVideo.colorScheme?.bg} flex flex-col items-center justify-center`}
+                >
+                  <div
+                    className={`${previewVideo.colorScheme?.num} text-white px-6 py-3 rounded-full font-bold text-4xl mb-8`}
+                  >
+                    #{previewVideo.videoNumber}
+                  </div>
+                  <div className="text-center text-white px-6">
+                    <Clock className="w-12 h-12 mx-auto mb-4 animate-spin" />
+                    <p className="text-lg font-medium">
+                      Video is processing...
+                    </p>
+                  </div>
                 </div>
+              )}
+            </div>
 
-                {/* Processing text */}
-                <div className="absolute bottom-4 left-4 right-4 text-center">
-                  <p className="text-muted-foreground font-medium">
-                    Video is processing...
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 flex gap-3">
+            <div className="p-4 flex gap-3">
               <Button
                 variant="outline"
                 className="flex-1"
@@ -907,128 +1042,49 @@ const MyContent = () => {
               </Button>
               {previewVideo.video_url && (
                 <Button
-                  className="flex-1 gap-2"
-                  onClick={() => {
-                    setPreviewVideo(null);
-                    handlePostNow(previewVideo.id);
+                  className="flex-1"
+                  onClick={async () => {
+                    const campaign = campaigns.find((c) =>
+                      getVideosFromCampaign(c).some(
+                        (v) => v.id === previewVideo.id
+                      )
+                    );
+                    if (campaign) {
+                      setPreviewVideo(null);
+                      await handlePostNow(previewVideo, campaign);
+                    }
                   }}
+                  disabled={loadingCaptions}
                 >
-                  <Send className="w-4 h-4" />
-                  Post This Video
+                  {loadingCaptions ? (
+                    <>
+                      <Clock className="w-4 h-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Post This Video
+                    </>
+                  )}
                 </Button>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       )}
 
-      {/* Post Now Modal */}
-      {selectedVideo && (
-        <div
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
-          onClick={() => {
-            setSelectedVideo(null);
-            setSelectedPlatforms([]);
+      {/* Caption Editor Modal */}
+      {showCaptionModal && selectedVideoForCaption && (
+        <CaptionEditorModal
+          selectedVideo={selectedVideoForCaption}
+          onClose={() => {
+            setShowCaptionModal(false);
+            setSelectedVideoForCaption(null);
           }}
-        >
-          <Card
-            className="max-w-md w-full p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold">Select Platforms</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedVideo(null);
-                  setSelectedPlatforms([]);
-                }}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Choose which platforms you want to post this video to
-            </p>
-
-            <div className="space-y-3 mb-6">
-              {platforms.map((platform) => {
-                const isConnected = connectedPlatforms.includes(platform.id);
-                const isSelected = selectedPlatforms.includes(platform.id);
-
-                return (
-                  <div
-                    key={platform.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:border-primary/50"
-                    } ${!isConnected && "opacity-50"}`}
-                    onClick={() => {
-                      if (isConnected) {
-                        togglePlatform(platform.id);
-                      } else {
-                        toast.error(
-                          `Please connect your ${platform.name} account first`
-                        );
-                      }
-                    }}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      disabled={!isConnected}
-                      onCheckedChange={() => {
-                        if (isConnected) {
-                          togglePlatform(platform.id);
-                        }
-                      }}
-                    />
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="text-2xl">{platform.icon}</span>
-                      <span className="font-medium">{platform.name}</span>
-                    </div>
-                    {!isConnected && (
-                      <Badge variant="outline" className="text-xs">
-                        Not Connected
-                      </Badge>
-                    )}
-                    {isConnected && (
-                      <Badge
-                        variant="outline"
-                        className="text-xs bg-green-500/10 text-green-500 border-green-500/20"
-                      >
-                        Connected
-                      </Badge>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setSelectedVideo(null);
-                  setSelectedPlatforms([]);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 gap-2"
-                onClick={handleConfirmPost}
-                disabled={selectedPlatforms.length === 0}
-              >
-                <Send className="w-4 h-4" />
-                Post Now
-              </Button>
-            </div>
-          </Card>
-        </div>
+          onPost={handlePostWithCaptions}
+          connectedPlatforms={connectedPlatforms}
+        />
       )}
     </div>
   );

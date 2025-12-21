@@ -15,21 +15,15 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AdStreamAI - Stream Your Ads to  Platforms",
+  title: "AdStreamAI – Create AI Ads & Auto-Post to Social Media",
   description:
-    "Create AI-generated product ads and distribute them across every major social platform automatically. Set your ad stream and forget.",
+    "Create high-converting AI ads in multiple formats and automatically publish them to Instagram, Facebook, TikTok, YouTube Shorts and more. One tool. Full automation.",
   authors: [{ name: "AdStreamAI" }],
   openGraph: {
-    title: "AdStreamAI - Stream Your Ads to Every Platform",
+    title: "AdStreamAI – Create AI Ads & Auto-Publish Everywhere",
     description:
-      "Create AI-generated product ads and distribute them across every major social platform automatically.",
+      "Generate AI-powered ads in multiple styles and automatically post them to all major social media platforms from one dashboard.",
     type: "website",
-    images: ["https://lovable.dev/opengraph-image-p98pqg.png"],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@AdStreamAI",
-    images: ["https://lovable.dev/opengraph-image-p98pqg.png"],
   },
 };
 

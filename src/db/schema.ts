@@ -92,20 +92,13 @@ export const campaignsTable = pgTable("campaigns", {
   user_id: uuid("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  // project_id: uuid("project_id")
-  //   .notNull()
-  //   .references(() => projectsTable.id, { onDelete: "cascade" }),
-  name: text("name"), // "Wireless Headphones Campaign"
+  name: text("name"),
   description: text("description"),
   product_image_url: text("product_image_url").notNull(),
-
   videos_generated: integer("videos_generated").notNull().default(0),
-
-  // Optional: Analytics aggregation (for future)
   total_views: integer("total_views").default(0),
   total_likes: integer("total_likes").default(0),
   total_shares: integer("total_shares").default(0),
-
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -119,12 +112,9 @@ export const projectsTable = pgTable("projects", {
   user_id: uuid("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-
-  // NEW: Link to campaign
   campaign_id: uuid("campaign_id").references(() => campaignsTable.id, {
     onDelete: "cascade",
   }),
-
   name: text("name"),
   description: text("description"),
   product_image_url: text("product_image_url").notNull(),
@@ -154,12 +144,36 @@ export const videosTable = pgTable("videos", {
   style: videoStyleEnum("style").notNull(),
   caption: text("caption"),
   hashtags: text("hashtags").array(),
+
+  // ✨ NOWE POLE - AI Generated Captions dla wszystkich platform
+  ai_captions: jsonb("ai_captions").$type<{
+    instagram?: {
+      text: string;
+      hashtags: string;
+    };
+    facebook?: {
+      title: string;
+      text: string;
+    };
+    youtube?: {
+      title: string;
+      description: string;
+    };
+    tiktok?: {
+      text: string;
+    };
+    // linkedin?: {
+    //   title: string;
+    //   text: string;
+    // };
+  }>(),
+
   metadata: jsonb("metadata"),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ============================================
-// SOCIAL MEDIA CONNECTIONS
+// SOCIAL MEDIA CONNECTIONS (UPDATED!)
 // ============================================
 
 export const socialConnectionsTable = pgTable("social_connections", {
@@ -168,14 +182,28 @@ export const socialConnectionsTable = pgTable("social_connections", {
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   platform: platformEnum("platform").notNull(),
+
+  // Generic fields
   platform_user_id: text("platform_user_id").notNull(),
   platform_username: text("platform_username"),
   access_token: text("access_token").notNull(),
   refresh_token: text("refresh_token"),
   token_expires_at: timestamp("token_expires_at"),
+
+  // NEW: Instagram/Facebook specific fields
+  page_id: text("page_id"), // Facebook Page ID (needed for Instagram)
+  instagram_account_id: text("instagram_account_id"), // Instagram Business Account ID
+  page_access_token: text("page_access_token"), // Separate token for page
+
+  // Additional metadata in JSON for platform-specific data
+  platform_metadata: jsonb("platform_metadata"), // Store any extra data per platform
+
   is_active: boolean("is_active").notNull().default(true),
   connected_at: timestamp("connected_at").notNull().defaultNow(),
   last_used_at: timestamp("last_used_at"),
+
+  // Optional: Track last token refresh
+  last_token_refresh: timestamp("last_token_refresh"),
 });
 
 // ============================================

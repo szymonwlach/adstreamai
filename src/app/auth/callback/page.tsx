@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function AuthCallback() {
   const router = useRouter();
+  const [status, setStatus] = useState("Processing...");
 
   const addUserToDB = async (user: { id: string; email: string | null }) => {
     if (!user.email) return;
+
     try {
+      console.log("Adding user to DB:", user.id);
       await fetch("/api/addUser", {
         method: "POST",
         headers: {
@@ -26,17 +30,41 @@ export default function AuthCallback() {
   };
 
   useEffect(() => {
+    console.log("📍 Supabase Auth Callback page loaded");
+
     const processOAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        setStatus("Verifying authentication...");
 
-      if (session?.user) {
-        // Dodaj użytkownika do DB
-        await addUserToDB({ id: session.user.id, email: session.user.email });
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
 
-        router.push("/dashboard");
-      } else {
+        if (error) {
+          console.error("Auth error:", error);
+          router.push("/auth?error=oauth_failed");
+          return;
+        }
+
+        if (session?.user) {
+          console.log("✅ User authenticated:", session.user.id);
+          setStatus("Setting up your account...");
+
+          // Dodaj użytkownika do DB
+          await addUserToDB({
+            id: session.user.id,
+            email: session.user.email,
+          });
+
+          setStatus("Redirecting to dashboard...");
+          router.push("/dashboard");
+        } else {
+          console.error("No session found");
+          router.push("/auth?error=no_session");
+        }
+      } catch (err) {
+        console.error("OAuth processing error:", err);
         router.push("/auth?error=oauth_failed");
       }
     };
@@ -45,8 +73,14 @@ export default function AuthCallback() {
   }, [router]);
 
   return (
-    <div className="p-10 text-center">
-      <h2 className="text-xl font-semibold">Signing you in…</h2>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center p-8">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+        <h2 className="text-xl font-semibold mb-2">{status}</h2>
+        <p className="text-sm text-muted-foreground">
+          Please wait while we sign you in...
+        </p>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,16 @@
 "use client";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Upload, Sparkles, Wand2, Globe, Crown, Info } from "lucide-react";
+import {
+  Upload,
+  Sparkles,
+  Wand2,
+  Globe,
+  Crown,
+  Info,
+  X,
+  Plus,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,17 +28,15 @@ import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// Separate component that uses useSearchParams
 const GenerateAdContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Check if pre-filling from campaign
   const campaignId = searchParams.get("campaign_id");
   const shouldPrefill = searchParams.get("prefill") === "true";
 
   const [campaignName, setCampaignName] = useState("");
-  const [productImage, setProductImage] = useState<string | null>(null);
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState("en");
@@ -39,7 +46,10 @@ const GenerateAdContent = () => {
   const [userPlan, setUserPlan] = useState<any>(null);
   const [isPrefillingFromCampaign, setIsPrefillingFromCampaign] =
     useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const prevCampaignIdRef = useRef<string | null>(null);
+
+  const MAX_IMAGES = 5;
 
   const languages = [
     { code: "en", name: "English", flag: "🇬🇧" },
@@ -102,10 +112,8 @@ const GenerateAdContent = () => {
     }
   };
 
-  // Pre-fill from campaign if needed
   useEffect(() => {
     const prefillFromCampaign = async () => {
-      // Only run once per campaignId
       if (!campaignId || !shouldPrefill) return;
       if (prevCampaignIdRef.current === campaignId) return;
 
@@ -125,9 +133,33 @@ const GenerateAdContent = () => {
         const campaign = data.campaigns.find((c: any) => c.id === campaignId);
 
         if (campaign) {
+          console.log("🔍 Loading campaign:", campaign);
+          console.log("📸 Product images from DB:", campaign.product_image_url);
+
           setCampaignName(campaign.name);
-          setProductImage(campaign.product_image_url);
-          setDescription(campaign.description);
+
+          // Obsługa product_image_url - może być string, array, lub string z przecinkami
+          let images: string[] = [];
+          if (campaign.product_image_url) {
+            if (Array.isArray(campaign.product_image_url)) {
+              // Już jest tablicą
+              images = campaign.product_image_url;
+            } else if (typeof campaign.product_image_url === "string") {
+              // Jeśli zawiera przecinki, rozdziel
+              if (campaign.product_image_url.includes(",")) {
+                images = campaign.product_image_url
+                  .split(",")
+                  .map((url: string) => url.trim());
+              } else {
+                // Pojedynczy URL
+                images = [campaign.product_image_url];
+              }
+            }
+          }
+
+          console.log("✅ Parsed images array:", images);
+          setProductImages(images);
+          setDescription(campaign.description || "");
 
           toast.success("Campaign loaded!", {
             description: `Generating more ads for "${campaign.name}"`,
@@ -174,44 +206,76 @@ const GenerateAdContent = () => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (productImages.length + files.length > MAX_IMAGES) {
+      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.user) return;
 
+    setIsUploading(true);
+
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProductImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const uploadedUrls: string[] = [];
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${session.user.id}/${fileName}`;
+      for (const file of files) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProductImages((prev) => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
 
-      const { data, error } = await supabase.storage
-        .from("product-images")
-        .upload(filePath, file);
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${Math.random()
+          .toString(36)
+          .substring(2)}.${fileExt}`;
+        const filePath = `${session.user.id}/${fileName}`;
 
-      if (error) throw error;
+        const { data, error } = await supabase.storage
+          .from("product-images")
+          .upload(filePath, file);
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("product-images").getPublicUrl(filePath);
+        if (error) throw error;
 
-      setProductImage(publicUrl);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("product-images").getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      setProductImages((prev) => {
+        const previews = prev.slice(-files.length);
+        const withoutPreviews = prev.slice(0, -files.length);
+        return [...withoutPreviews, ...uploadedUrls];
+      });
+
+      toast.success(
+        `${files.length} image${files.length > 1 ? "s" : ""} uploaded`
+      );
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Failed to upload image");
+      toast.error("Failed to upload images");
+    } finally {
+      setIsUploading(false);
     }
   };
 
+  const removeImage = (index: number) => {
+    setProductImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const creditsNeeded = selectedStyles.length;
-  const canGenerate = userCredits >= creditsNeeded && creditsNeeded > 0;
+  const canGenerate =
+    userCredits >= creditsNeeded &&
+    creditsNeeded > 0 &&
+    productImages.length > 0;
 
   const handleGenerate = async () => {
     const {
@@ -223,9 +287,8 @@ const GenerateAdContent = () => {
       return;
     }
 
-    // Validation - only product image and styles are required now
-    if (!productImage) {
-      toast.error("Please upload a product image");
+    if (productImages.length === 0) {
+      toast.error("Please upload at least one product image");
       return;
     }
 
@@ -236,29 +299,21 @@ const GenerateAdContent = () => {
 
     try {
       console.log("💾 Saving project to database...");
-      console.log("📊 Selected styles:", selectedStyles);
-      console.log("📊 Credits needed:", creditsNeeded);
 
       const projectData = {
         user_id: session.user.id,
-        name: campaignName.trim() || undefined, // undefined = won't be sent
-        description: description.trim() || undefined, // undefined = won't be sent
-        product_url: productImage,
-        selected_style: selectedStyles, // This should be an array like ["ugc", "trend"]
+        name: campaignName.trim() || undefined,
+        description: description.trim() || undefined,
+        product_url: productImages,
+        selected_style: selectedStyles,
         language: selectedLanguage,
         quality: selectedQuality,
         duration: selectedDuration,
         campaign_id: campaignId || undefined,
       };
 
-      // Remove undefined values before sending
       const cleanedData = Object.fromEntries(
         Object.entries(projectData).filter(([_, v]) => v !== undefined)
-      );
-
-      console.log(
-        "📤 Sending projectData:",
-        JSON.stringify(cleanedData, null, 2)
       );
 
       const saveResponse = await fetch("/api/saveAd", {
@@ -267,11 +322,8 @@ const GenerateAdContent = () => {
         body: JSON.stringify(cleanedData),
       });
 
-      console.log("📥 Response status:", saveResponse.status);
-
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json();
-        console.error("❌ Save failed:", errorData);
         throw new Error(
           errorData.details || errorData.error || "Failed to save project"
         );
@@ -279,10 +331,7 @@ const GenerateAdContent = () => {
 
       const { projectId, campaignId: newCampaignId } =
         await saveResponse.json();
-      console.log("✅ Project saved with ID:", projectId);
-      console.log("✅ Campaign ID:", newCampaignId);
 
-      console.log("📤 Sending to n8n with project_id...");
       const n8nResponse = await fetch("/api/sendToN8n", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,7 +342,7 @@ const GenerateAdContent = () => {
           product_name: campaignName.trim() || undefined,
           user_id: session.user.id,
           description: description.trim() || undefined,
-          product_image: productImage,
+          product_images: productImages,
           selected_styles: selectedStyles,
           language:
             languages.find((l) => l.code === selectedLanguage)?.name ||
@@ -306,11 +355,8 @@ const GenerateAdContent = () => {
       const n8nData = await n8nResponse.json();
 
       if (!n8nResponse.ok) {
-        console.error("❌ n8n error:", n8nData);
         throw new Error(n8nData.error || "Failed to send to n8n");
       }
-
-      console.log("✅ n8n received data and is processing...");
 
       if (campaignId) {
         toast.success("More ads are being generated!", {
@@ -362,11 +408,10 @@ const GenerateAdContent = () => {
           <p className="text-muted-foreground">
             {campaignId
               ? "Add more ads to your existing campaign"
-              : "Upload your product photo and let AI create engaging ad content"}
+              : "Upload your product photos and let AI create engaging ad content"}
           </p>
         </div>
 
-        {/* Campaign Info Banner */}
         {campaignId && (
           <Card className="p-4 mb-6 bg-primary/5 border-primary/20">
             <div className="flex items-start gap-3">
@@ -427,50 +472,73 @@ const GenerateAdContent = () => {
                 <span className="inline-flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
                   Leave empty and AI will generate a creative campaign name
-                  based on your product image
+                  based on your product images
                 </span>
               </p>
             </div>
 
             {/* Image Upload */}
             <div>
-              <Label className="text-base mb-3 block">Product Photo *</Label>
-              {campaignId && productImage && (
+              <Label className="text-base mb-3 block">
+                Product Photos * (up to {MAX_IMAGES})
+              </Label>
+              {campaignId && productImages.length > 0 && (
                 <p className="text-sm text-muted-foreground mb-3">
-                  ✓ Using image from campaign. Upload a new one to change it.
+                  ✓ Using {productImages.length} image
+                  {productImages.length > 1 ? "s" : ""} from campaign. Upload
+                  more or remove existing ones.
                 </p>
               )}
-              <label
-                htmlFor="image-upload"
-                className="block cursor-pointer group"
-              >
-                {productImage ? (
-                  <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-dashed border-border hover:border-primary transition-colors">
+
+              <div className="grid grid-cols-3 gap-3">
+                {productImages.map((image, index) => (
+                  <div key={index} className="relative group aspect-square">
                     <img
-                      src={productImage}
-                      alt="Product"
-                      className="w-full h-full object-contain bg-muted"
+                      src={image}
+                      alt={`Product ${index + 1}`}
+                      className="w-full h-full object-cover rounded-lg border-2 border-border"
                     />
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="aspect-video rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors flex flex-col items-center justify-center bg-muted/50 group-hover:bg-muted">
-                    <Upload className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-sm font-medium mb-1">
-                      Click to upload or drag & drop
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG up to 10MB
-                    </p>
-                  </div>
+                ))}
+
+                {productImages.length < MAX_IMAGES && (
+                  <label
+                    htmlFor="image-upload"
+                    className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary transition-all flex flex-col items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer group"
+                  >
+                    {isUploading ? (
+                      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-muted-foreground group-hover:text-primary mb-2 transition-colors" />
+                        <p className="text-xs font-medium text-center px-2">
+                          {productImages.length === 0
+                            ? "Upload photos"
+                            : "Add more"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground text-center px-2 mt-1">
+                          PNG, JPG • Multiple
+                        </p>
+                      </>
+                    )}
+                    <input
+                      id="image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                  </label>
                 )}
-                <input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
+              </div>
             </div>
 
             {/* Description */}
@@ -496,8 +564,8 @@ const GenerateAdContent = () => {
               <p className="text-xs text-muted-foreground mt-2">
                 <span className="inline-flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
-                  Leave empty and AI will analyze your product image to create a
-                  compelling description and ad copy
+                  Leave empty and AI will analyze your product images to create
+                  a compelling description and ad copy
                 </span>
               </p>
             </div>
@@ -746,6 +814,9 @@ const GenerateAdContent = () => {
                       {selectedStyles.length} video
                       {selectedStyles.length !== 1 ? "s" : ""} will be generated
                     </span>
+                    {productImages.length > 1 && (
+                      <span> from {productImages.length} images</span>
+                    )}
                     {" • "}
                     <span
                       className={
@@ -778,7 +849,7 @@ const GenerateAdContent = () => {
               <Button
                 onClick={handleGenerate}
                 className="flex-1 gap-2"
-                disabled={!productImage || !canGenerate}
+                disabled={productImages.length === 0 || !canGenerate}
               >
                 <Wand2 className="w-4 h-4" />
                 Generate {creditsNeeded} Video{creditsNeeded !== 1 ? "s" : ""} (
@@ -792,7 +863,6 @@ const GenerateAdContent = () => {
   );
 };
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div className="min-h-screen bg-background">
     <DashboardNavbar />
@@ -805,7 +875,6 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Main exported component wrapped in Suspense
 const GenerateAd = () => {
   return (
     <Suspense fallback={<LoadingFallback />}>
