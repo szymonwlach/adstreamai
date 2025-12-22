@@ -10,12 +10,23 @@ export default function AuthPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Tylko sprawdź czy już zalogowany
+    // Sprawdź sesję od razu
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.push("/dashboard");
       }
     });
+
+    // Nasłuchuj zmian stanu autoryzacji (OAuth redirect)
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          router.push("/dashboard");
+        }
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
   }, [router]);
 
   return (
