@@ -56,9 +56,35 @@ export default function AuthPage() {
   // Pokaż loading tylko podczas sprawdzania sesji
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 flex items-center justify-center">
-        <div className="animate-pulse">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full opacity-20" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-blue-950 dark:to-indigo-950 flex items-center justify-center p-4">
+        <div className="relative">
+          {/* Glow effect */}
+          <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+
+          {/* Main card */}
+          <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl p-12 max-w-md w-full border border-white/20 dark:border-slate-700/50">
+            <div className="flex flex-col items-center gap-8">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500 rounded-full blur-xl opacity-30 animate-pulse" />
+                <div className="relative bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-5 shadow-lg">
+                  <div className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              </div>
+              <div className="text-center space-y-3">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
+                  Checking Session
+                </h2>
+                <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Please wait while we verify your login status
+                </p>
+                <div className="flex items-center justify-center gap-1.5 mt-6">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
