@@ -709,9 +709,9 @@ const MyContent = () => {
                                   AI is generating your videos
                                 </p>
                                 <p className="text-orange-300/80 text-xs">
-                                  Average time: 2-4 minutes per video •
-                                  Auto-refresh every minute or click Refresh
-                                  button
+                                  Average time: 2–4 minutes. The page refreshes
+                                  automatically every minute, or you can click
+                                  the Refresh button to check progress manually.
                                 </p>
                               </div>
                             </div>

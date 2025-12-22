@@ -25,6 +25,12 @@ export const Footer = () => {
               Terms & Conditions
             </a>
             <a
+              href="/data-deletion"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Data Deletion
+            </a>
+            <a
               href="#blog"
               className="text-muted-foreground hover:text-foreground transition-colors"
             >
