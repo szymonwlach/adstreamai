@@ -56,18 +56,8 @@ export default function AuthPage() {
   // Pokaż loading tylko podczas sprawdzania sesji
   if (isChecking) {
     return (
-      <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-background" />
-
-        {/* Animated background blurs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-        <div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse"
-          style={{ animationDelay: "1s" }}
-        />
-
-        <div className="relative z-10">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="relative">
           {/* Glow effect */}
           <div className="absolute inset-0 bg-primary/30 rounded-full blur-xl opacity-30 animate-pulse" />
 
@@ -101,17 +91,7 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-background" />
-
-      {/* Animated background elements */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-      <div
-        className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse"
-        style={{ animationDelay: "1s" }}
-      />
-
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
       {/* Back button */}
       <div className="absolute top-6 left-6 z-10">
         <a
