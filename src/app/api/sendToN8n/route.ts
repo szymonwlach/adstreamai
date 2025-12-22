@@ -10,9 +10,9 @@ export async function POST(req: NextRequest) {
       user_id,
       product_name,
       description,
-      product_image, // Single image (backward compatibility)
-      product_image_url, // Single image URL
-      product_images, // 🔥 NOWE: Array of images
+      product_image,
+      product_image_url,
+      product_images,
       selected_styles,
       language,
       quality,
@@ -30,19 +30,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ⚠️ UWAGA: To jest localhost - zmień na production URL!
-    const n8nWebhookUrl =
-      process.env.N8N_WEBHOOK_URL ||
-      "http://localhost:5678/webhook-test/9b62101c-52a8-489d-8df7-935b41e93b14";
+    // 🔥 WAŻNE: Ustaw prawidłowy URL webhooka z n8n
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
 
-    // 🔥 POPRAWKA: Obsłuż zarówno single image jak i array
+    if (!n8nWebhookUrl) {
+      console.error("❌ N8N_WEBHOOK_URL not configured!");
+      return NextResponse.json(
+        { error: "n8n webhook URL not configured" },
+        { status: 500 }
+      );
+    }
+
+    // Obsłuż zarówno single image jak i array
     let imageUrls;
-
     if (product_images && Array.isArray(product_images)) {
-      // Jeśli dostajemy array (nowy format)
       imageUrls = product_images;
     } else if (product_image || product_image_url) {
-      // Jeśli dostajemy single image (stary format)
       imageUrls = [product_image || product_image_url];
     } else {
       imageUrls = [];
@@ -54,20 +57,19 @@ export async function POST(req: NextRequest) {
 
     console.log(`📸 Processing ${imageUrls.length} image(s):`, imageUrls);
 
-    // Prepare payload - always include all fields, use null if undefined
     const payload = {
       project_id,
       campaign_id: campaign_id || null,
       user_id,
       product_name: product_name || null,
       description: description || null,
-      product_images: imageUrls, // 🔥 Array of images
-      product_image_url: imageUrls[0] || null, // 🔥 First image for backward compatibility
+      product_images: imageUrls,
+      product_image_url: imageUrls[0] || null,
       selected_styles,
       language: language || "English",
       quality: quality || "720p",
       duration: duration || 10,
-      plan: plan?.plan || plan || "free", // Handle both plan.plan and plan
+      plan: plan?.plan || plan || "free",
     };
 
     console.log("🚀 Sending to n8n:", payload);
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("❌ n8n error:", errorText);
-      throw new Error(`n8n returned ${response.status}`);
+      throw new Error(`n8n returned ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
@@ -98,7 +100,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("❌ Error sending to n8n:", error);
     return NextResponse.json(
-      { error: "Failed to send to n8n" },
+      {
+        error: "Failed to send to n8n",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
