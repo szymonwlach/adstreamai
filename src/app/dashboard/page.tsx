@@ -68,6 +68,17 @@ const Dashboard = () => {
         window.history.replaceState({}, "", "/dashboard#connect");
       }
     }
+    if (params.has("tiktok")) {
+      const status = params.get("tiktok");
+      if (status === "connected") {
+        setTimeout(() => {
+          alert(
+            "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
+          );
+        }, 500);
+        window.history.replaceState({}, "", "/dashboard#connect");
+      }
+    }
     if (params.has("error")) {
       const error = params.get("error");
       setTimeout(() => {
@@ -107,7 +118,68 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+  // ✅ NOWA FUNKCJA: Connect TikTok
+  const connectTikTok = async () => {
+    setConnectingPlatform("tiktok");
 
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const redirectUri = `${baseUrl}/api/auth/tiktok/callback`;
+
+      console.log("🔍 TikTok Redirect URI:", redirectUri);
+
+      if (
+        !redirectUri.startsWith("http://") &&
+        !redirectUri.startsWith("https://")
+      ) {
+        console.error("❌ Invalid redirect URI:", redirectUri);
+        alert(
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+        );
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const state = user.id;
+
+      // TikTok OAuth Scopes
+      const scopes = ["user.info.basic", "video.upload", "video.publish"].join(
+        ","
+      );
+
+      console.log("🔑 Using TikTok scopes:", scopes);
+
+      const clientKey = process.env.NEXT_PUBLIC_TIKTOK_CLIENT_KEY;
+      if (!clientKey) {
+        console.error("❌ NEXT_PUBLIC_TIKTOK_CLIENT_KEY not configured!");
+        alert("TikTok Client Key is not configured. Check your .env file.");
+        setConnectingPlatform(null);
+        return;
+      }
+
+      const authUrl =
+        `https://www.tiktok.com/v2/auth/authorize?` +
+        `client_key=${clientKey}&` +
+        `scope=${scopes}&` +
+        `response_type=code&` +
+        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+        `state=${state}`;
+
+      console.log("🚀 Redirecting to TikTok OAuth:", authUrl);
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error("Error connecting TikTok:", error);
+      setConnectingPlatform(null);
+    }
+  };
   const connectInstagram = async () => {
     setConnectingPlatform("instagram");
 
@@ -307,7 +379,7 @@ const Dashboard = () => {
         await connectFacebook();
         break;
       case "tiktok":
-        alert("TikTok coming soon!");
+        await connectTikTok();
         break;
       case "youtube_shorts":
         await connectYouTube(); // ✅ ZMIENIONE

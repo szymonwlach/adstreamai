@@ -571,11 +571,152 @@ async function postToTikTok(
   connection: any,
   video: VideoData
 ): Promise<PostResult> {
-  console.log("🎵 TikTok not implemented yet");
-  return {
-    success: false,
-    error: "TikTok posting not implemented yet",
-  };
+  try {
+    let accessToken = connection.access_token;
+
+    if (!accessToken) {
+      throw new Error("TikTok access token not found");
+    }
+
+    console.log("🎵 Posting to TikTok...");
+
+    // Step 1: Initialize upload
+    let initResponse = await fetch(
+      "https://open.tiktokapis.com/v2/post/publish/video/init/",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          post_info: {
+            title: video.caption?.slice(0, 150) || "Video Post",
+            privacy_level: "PUBLIC_TO_EVERYONE", // lub "SELF_ONLY" dla testów
+            disable_duet: false,
+            disable_comment: false,
+            disable_stitch: false,
+            video_cover_timestamp_ms: 1000,
+          },
+          source_info: {
+            source: "FILE_UPLOAD",
+            video_size: 0,
+            chunk_size: 10000000,
+            total_chunk_count: 1,
+          },
+        }),
+      }
+    );
+
+    let initData = await initResponse.json();
+
+    // 🔄 Jeśli token wygasł, spróbuj odświeżyć
+    if (
+      initData.error &&
+      (initData.error.code === "invalid_token" ||
+        initData.error.code === "access_token_invalid")
+    ) {
+      console.log("🔄 TikTok token expired, refreshing...");
+
+      const newToken = await refreshTikTokToken(
+        connection.refresh_token,
+        connection.id
+      );
+
+      if (!newToken) {
+        throw new Error("Token expired. Please reconnect your TikTok account.");
+      }
+
+      accessToken = newToken;
+
+      // Retry request z nowym tokenem
+      initResponse = await fetch(
+        "https://open.tiktokapis.com/v2/post/publish/video/init/",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            post_info: {
+              title: video.caption?.slice(0, 150) || "Video Post",
+              privacy_level: "PUBLIC_TO_EVERYONE",
+              disable_duet: false,
+              disable_comment: false,
+              disable_stitch: false,
+              video_cover_timestamp_ms: 1000,
+            },
+            source_info: {
+              source: "FILE_UPLOAD",
+              video_size: 0,
+              chunk_size: 10000000,
+              total_chunk_count: 1,
+            },
+          }),
+        }
+      );
+
+      initData = await initResponse.json();
+    }
+
+    if (initData.error) {
+      throw new Error(`TikTok Init Error: ${initData.error.message}`);
+    }
+
+    const { publish_id, upload_url } = initData.data;
+
+    console.log("✅ TikTok upload session created:", publish_id);
+
+    // Step 2: Upload video
+    const videoResponse = await fetch(video.video_url);
+    const videoBlob = await videoResponse.blob();
+
+    const uploadResponse = await fetch(upload_url, {
+      method: "PUT",
+      body: videoBlob,
+      headers: {
+        "Content-Type": "video/mp4",
+      },
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+    }
+
+    console.log("✅ Video uploaded to TikTok");
+
+    // Step 3: Publish
+    const publishResponse = await fetch(
+      "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          publish_id: publish_id,
+        }),
+      }
+    );
+
+    const publishData = await publishResponse.json();
+
+    console.log("🎉 TikTok video published!");
+
+    return {
+      success: true,
+      postId: publish_id,
+      url: `https://www.tiktok.com/@${connection.platform_username}/video/${publish_id}`,
+    };
+  } catch (error: any) {
+    console.error("❌ TikTok error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to post to TikTok",
+    };
+  }
 }
 
 // ============================================
@@ -752,5 +893,63 @@ async function refreshYouTubeToken(
   } catch (error: any) {
     console.error("❌ Failed to refresh YouTube token:", error);
     throw error;
+  }
+}
+async function refreshTikTokToken(
+  refreshToken: string,
+  connectionId: string
+): Promise<string | null> {
+  try {
+    if (!refreshToken) {
+      console.error("❌ No refresh token available");
+      return null;
+    }
+
+    console.log("🔄 Refreshing TikTok token...");
+
+    const response = await fetch(
+      "https://open.tiktokapis.com/v2/oauth/token/",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          client_key: process.env.TIKTOK_CLIENT_KEY!,
+          client_secret: process.env.TIKTOK_CLIENT_SECRET!,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.error || !data.data) {
+      console.error("❌ Token refresh failed:", data.error);
+      return null;
+    }
+
+    const newAccessToken = data.data.access_token;
+    const newRefreshToken = data.data.refresh_token;
+    const expiresIn = data.data.expires_in;
+
+    // Zaktualizuj token w bazie danych
+    await db
+      .update(socialConnectionsTable)
+      .set({
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken || refreshToken,
+        token_expires_at: new Date(Date.now() + expiresIn * 1000),
+        last_token_refresh: new Date(),
+      })
+      .where(eq(socialConnectionsTable.id, connectionId));
+
+    console.log("✅ TikTok token refreshed successfully");
+
+    return newAccessToken;
+  } catch (error: any) {
+    console.error("❌ Failed to refresh TikTok token:", error);
+    return null;
   }
 }
