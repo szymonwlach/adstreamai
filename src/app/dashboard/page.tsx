@@ -30,14 +30,33 @@ const Dashboard = () => {
   const router = useRouter();
 
   const platforms = [
-    { id: "instagram", name: "Instagram", icon: "📸", color: "bg-purple-500" },
-    { id: "tiktok", name: "TikTok", icon: "🎵", color: "bg-pink-500" },
-    { id: "facebook", name: "Facebook", icon: "👥", color: "bg-blue-500" },
     {
       id: "youtube_shorts",
       name: "YouTube Shorts",
       icon: "▶️",
       color: "bg-red-500",
+      available: true,
+    },
+    {
+      id: "instagram",
+      name: "Instagram",
+      icon: "📸",
+      color: "bg-purple-500",
+      available: false,
+    },
+    {
+      id: "tiktok",
+      name: "TikTok",
+      icon: "🎵",
+      color: "bg-pink-500",
+      available: false,
+    },
+    {
+      id: "facebook",
+      name: "Facebook",
+      icon: "👥",
+      color: "bg-blue-500",
+      available: false,
     },
   ];
 
@@ -118,6 +137,32 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  const disconnectPlatform = async (platformId: string) => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const response = await fetch("/api/disconnect-platform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, platform: platformId }),
+      });
+
+      if (response.ok) {
+        await checkConnectedPlatforms();
+        alert("✅ Platform disconnected successfully!");
+      } else {
+        alert("❌ Failed to disconnect platform");
+      }
+    } catch (error) {
+      console.error("Error disconnecting platform:", error);
+      alert("❌ Error disconnecting platform");
+    }
+  };
+
   // ✅ NOWA FUNKCJA: Connect TikTok
   const connectTikTok = async () => {
     setConnectingPlatform("tiktok");
@@ -366,23 +411,31 @@ const Dashboard = () => {
   };
 
   const handlePlatformClick = async (platformId: string) => {
-    if (connectedPlatforms.includes(platformId)) {
-      // TODO: Pokaż modal z opcjami (disconnect, view details)
+    const platform = platforms.find((p) => p.id === platformId);
+
+    // If platform is not available yet
+    if (!platform?.available) {
+      alert(
+        "🚧 This platform is coming soon!\n\nWe're working on integrating more platforms. Stay tuned!"
+      );
       return;
     }
 
+    // If already connected, show disconnect option
+    if (connectedPlatforms.includes(platformId)) {
+      const shouldDisconnect = confirm(
+        `Do you want to disconnect ${platform.name}?`
+      );
+      if (shouldDisconnect) {
+        await disconnectPlatform(platformId);
+      }
+      return;
+    }
+
+    // Only YouTube is available to connect
     switch (platformId) {
-      case "instagram":
-        await connectInstagram();
-        break;
-      case "facebook":
-        await connectFacebook();
-        break;
-      case "tiktok":
-        await connectTikTok();
-        break;
       case "youtube_shorts":
-        await connectYouTube(); // ✅ ZMIENIONE
+        await connectYouTube();
         break;
     }
   };
@@ -611,7 +664,9 @@ const Dashboard = () => {
             </div>
             <Badge variant="outline" className="gap-2 px-3 py-1">
               <Link2 className="w-4 h-4" />
-              {connectedPlatforms.length} / {platforms.length} connected
+              {connectedPlatforms.length > 0
+                ? "YouTube Connected"
+                : "Not Connected"}
             </Badge>
           </div>
 
@@ -619,11 +674,11 @@ const Dashboard = () => {
             <Card className="p-10 mb-6 bg-muted/30 border-2 border-dashed border-border text-center">
               <Link2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-2xl font-bold mb-2">
-                No accounts connected yet
+                Connect Your YouTube Account
               </h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Connect your social media accounts to start posting AI-generated
-                content automatically
+                Connect your YouTube account to start posting AI-generated
+                Shorts automatically. More platforms coming soon!
               </p>
             </Card>
           )}
@@ -632,14 +687,21 @@ const Dashboard = () => {
             {platforms.map((platform) => {
               const isConnected = connectedPlatforms.includes(platform.id);
               const isConnecting = connectingPlatform === platform.id;
+              const isAvailable = platform.available;
 
               return (
                 <Card
                   key={platform.id}
-                  className={`p-6 transition-all cursor-pointer ${
+                  className={`p-6 transition-all ${
+                    isAvailable
+                      ? "cursor-pointer"
+                      : "opacity-60 cursor-not-allowed"
+                  } ${
                     isConnected
                       ? "border-2 border-primary bg-primary/10 hover:bg-primary/15 shadow-md"
-                      : "border-2 border-border hover:border-primary/50 hover:shadow-md"
+                      : isAvailable
+                      ? "border-2 border-border hover:border-primary/50 hover:shadow-md"
+                      : "border-2 border-dashed border-muted-foreground/30"
                   }`}
                   onClick={() =>
                     !isConnecting && handlePlatformClick(platform.id)
@@ -647,24 +709,60 @@ const Dashboard = () => {
                 >
                   <div className="flex items-center gap-4 mb-4">
                     <div
-                      className={`w-14 h-14 ${platform.color} rounded-xl flex items-center justify-center text-2xl shadow-lg`}
+                      className={`w-14 h-14 ${platform.color} rounded-xl flex items-center justify-center text-2xl shadow-lg relative`}
                     >
                       {platform.icon}
+                      {!isAvailable && (
+                        <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                          <span className="text-xs font-bold text-white">
+                            🚧
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold text-base">{platform.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-base">{platform.name}</h3>
+                        {platform.id === "youtube_shorts" && isAvailable && (
+                          <Badge variant="default" className="text-xs">
+                            Active
+                          </Badge>
+                        )}
+                        {!isAvailable && (
+                          <Badge variant="outline" className="text-xs">
+                            Soon
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        {isConnected ? "Connected" : "Not connected"}
+                        {isConnected
+                          ? "Connected"
+                          : !isAvailable
+                          ? "Coming soon"
+                          : "Not connected"}
                       </p>
                     </div>
                   </div>
 
                   {isConnected ? (
-                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                      <Check className="w-4 h-4" />
-                      <span>Active & Ready</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                        <Check className="w-4 h-4" />
+                        <span>Active & Ready</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          disconnectPlatform(platform.id);
+                        }}
+                      >
+                        Disconnect
+                      </Button>
                     </div>
-                  ) : (
+                  ) : isAvailable ? (
                     <Button
                       variant="outline"
                       className="w-full"
@@ -683,6 +781,15 @@ const Dashboard = () => {
                         </>
                       )}
                     </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="sm"
+                      disabled
+                    >
+                      Coming Soon
+                    </Button>
                   )}
                 </Card>
               );
@@ -698,12 +805,11 @@ const Dashboard = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-base font-semibold mb-1">
-                      Great! You've connected {connectedPlatforms.length}{" "}
-                      platform{connectedPlatforms.length > 1 ? "s" : ""}
+                      Great! Your YouTube is connected
                     </p>
                     <p className="text-sm text-muted-foreground">
                       You can now generate campaigns and automatically post
-                      videos to your connected accounts
+                      Shorts to your YouTube channel
                     </p>
                   </div>
                   <Button
@@ -732,10 +838,11 @@ const Dashboard = () => {
               <div className="flex-1">
                 <h3 className="font-bold text-xl mb-2">Pro Tip</h3>
                 <p className="text-muted-foreground">
-                  Connect all your social media accounts now to seamlessly post
-                  your AI-generated content across multiple platforms. Each
-                  video style costs 15 credits, and you can generate multiple
-                  styles in one campaign for maximum reach!
+                  Connect your YouTube account to automatically post
+                  AI-generated Shorts. Each video style costs 15 credits, and
+                  you can generate multiple styles in one campaign for maximum
+                  reach! More platforms (Instagram, TikTok, Facebook) coming
+                  soon.
                 </p>
               </div>
             </div>
