@@ -11,7 +11,7 @@ interface PrivacyPolicyProps {
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({
   companyName = "AdStreamAI",
   contactEmail = "contact@adstreamai.com",
-  lastUpdated = "December 24, 2025",
+  lastUpdated = "December 27, 2025",
 }) => {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8">
