@@ -224,7 +224,12 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
   platform: platformEnum("platform").notNull(),
   scheduled_for: timestamp("scheduled_for").notNull(),
   status: postStatusEnum("status").notNull().default("scheduled"),
-  caption: text("caption"),
+  captions: jsonb("captions").$type<{
+    instagram?: { text: string; hashtags: string };
+    facebook?: { title: string; text: string };
+    youtube?: { title: string; description: string };
+    tiktok?: { text: string };
+  }>(),
   hashtags: text("hashtags").array(),
   platform_post_id: text("platform_post_id"),
   platform_url: text("platform_url"),

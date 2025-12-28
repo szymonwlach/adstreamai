@@ -49,7 +49,7 @@ const Dashboard = () => {
       name: "TikTok",
       icon: "🎵",
       color: "bg-pink-500",
-      available: false,
+      available: true,
     },
     {
       id: "facebook",
@@ -436,6 +436,9 @@ const Dashboard = () => {
     switch (platformId) {
       case "youtube_shorts":
         await connectYouTube();
+        break;
+      case "tiktok":
+        await connectTikTok(); // ✅ DODAJ TEN CASE
         break;
     }
   };
