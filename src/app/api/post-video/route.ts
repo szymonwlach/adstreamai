@@ -5,7 +5,6 @@ import {
   socialConnectionsTable,
   scheduledPostsTable,
   videosTable,
-  projectsTable,
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 
@@ -51,7 +50,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Pobierz video z bazy
     const [videoData] = await db
       .select()
       .from(videosTable)
@@ -62,7 +60,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // Pobierz ai_captions z JSONB
     const aiCaptions = (videoData.ai_captions as any) || {};
 
     const video: VideoData = {
@@ -81,7 +78,6 @@ export async function POST(request: NextRequest) {
 
     const results = [];
 
-    // Dla każdej platformy
     for (const platform of platforms) {
       try {
         const [connection] = await db
@@ -105,22 +101,18 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Pobierz custom caption z modala lub użyj AI caption z bazy
         const normalizedPlatform =
           platform === "youtube_shorts" ? "youtube" : platform;
 
         let platformCaption;
 
         if (providedCaptions && providedCaptions[platform]) {
-          // Użyj edytowanych captionów z modala
           platformCaption = providedCaptions[platform];
           console.log(`✏️ Using edited caption for ${platform}`);
         } else if (aiCaptions[normalizedPlatform]) {
-          // Użyj AI-generated captionów z bazy
           platformCaption = aiCaptions[normalizedPlatform];
           console.log(`🤖 Using AI caption for ${platform}`);
         } else {
-          // Fallback do podstawowych danych
           platformCaption = {
             text: video.caption || "",
             title: video.caption || "",
@@ -130,8 +122,20 @@ export async function POST(request: NextRequest) {
           console.log(`⚠️ Using fallback caption for ${platform}`);
         }
 
+        // Przygotuj hashtagi
+        let hashtagsArray: string[] = [];
+        if (typeof platformCaption.hashtags === "string") {
+          hashtagsArray = platformCaption.hashtags
+            .split(/\s+/)
+            .filter((h: string) => h.startsWith("#"));
+        } else if (Array.isArray(platformCaption.hashtags)) {
+          hashtagsArray = platformCaption.hashtags;
+        } else if (Array.isArray(video.hashtags)) {
+          hashtagsArray = video.hashtags;
+        }
+
         // ========================================
-        // SPECJALNA OBSŁUGA DLA FACEBOOKA
+        // FACEBOOK
         // ========================================
         if (platform === "facebook") {
           const postTypes = options?.facebookPostTypes || ["reels"];
@@ -151,18 +155,7 @@ export async function POST(request: NextRequest) {
                 postType as "feed" | "reels"
               );
 
-              // Przygotuj hashtagi
-              let hashtagsArray: string[] = [];
-              if (typeof platformCaption.hashtags === "string") {
-                hashtagsArray = platformCaption.hashtags
-                  .split(/\s+/)
-                  .filter((h) => h.startsWith("#"));
-              } else if (Array.isArray(platformCaption.hashtags)) {
-                hashtagsArray = platformCaption.hashtags;
-              } else if (Array.isArray(video.hashtags)) {
-                hashtagsArray = video.hashtags;
-              }
-
+              // ✅ POPRAWIONE: captions zamiast caption
               await db.insert(scheduledPostsTable).values({
                 user_id: userId,
                 video_id: videoId,
@@ -170,12 +163,21 @@ export async function POST(request: NextRequest) {
                 platform: "facebook" as any,
                 scheduled_for: new Date(),
                 status: postResult?.success ? "posted" : "failed",
-                caption: `${
-                  platformCaption.text ||
-                  platformCaption.title ||
-                  video.caption ||
-                  ""
-                } [${postType.toUpperCase()}]`,
+                captions: {
+                  facebook: {
+                    title: `${postType.toUpperCase()}: ${
+                      platformCaption.title ||
+                      platformCaption.text ||
+                      video.caption ||
+                      ""
+                    }`,
+                    text:
+                      platformCaption.text ||
+                      platformCaption.title ||
+                      video.caption ||
+                      "",
+                  },
+                },
                 hashtags: hashtagsArray,
                 platform_post_id: postResult?.postId || null,
                 platform_url: postResult?.url || null,
@@ -208,7 +210,6 @@ export async function POST(request: NextRequest) {
         // ========================================
         let postResult: PostResult | undefined;
 
-        // Przygotuj dane do postowania z odpowiednim captionem
         const videoWithCaption = {
           ...video,
           caption:
@@ -223,7 +224,6 @@ export async function POST(request: NextRequest) {
         } else if (platform === "tiktok") {
           postResult = await postToTikTok(connection, videoWithCaption);
         } else if (platform === "youtube_shorts") {
-          // Dla YouTube przekaż tytuł i opis
           const youtubeVideo: VideoDataWithDescription = {
             ...video,
             caption: platformCaption.title || video.caption || "",
@@ -237,19 +237,28 @@ export async function POST(request: NextRequest) {
           };
         }
 
-        // Przygotuj hashtagi
-        let hashtagsArray: string[] = [];
-        if (typeof platformCaption.hashtags === "string") {
-          hashtagsArray = platformCaption.hashtags
-            .split(/\s+/)
-            .filter((h) => h.startsWith("#"));
-        } else if (Array.isArray(platformCaption.hashtags)) {
-          hashtagsArray = platformCaption.hashtags;
-        } else if (Array.isArray(video.hashtags)) {
-          hashtagsArray = video.hashtags;
+        // ✅ POPRAWIONE: captions z odpowiednim formatem dla każdej platformy
+        const captionsObject: any = {};
+
+        if (platform === "youtube_shorts") {
+          captionsObject.youtube = {
+            title: platformCaption.title || video.caption || "",
+            description: platformCaption.description || video.caption || "",
+          };
+        } else if (platform === "instagram") {
+          captionsObject.instagram = {
+            text: platformCaption.text || video.caption || "",
+            hashtags:
+              typeof platformCaption.hashtags === "string"
+                ? platformCaption.hashtags
+                : (platformCaption.hashtags || []).join(" "),
+          };
+        } else if (platform === "tiktok") {
+          captionsObject.tiktok = {
+            text: platformCaption.text || video.caption || "",
+          };
         }
 
-        // Zapisz scheduled post
         await db.insert(scheduledPostsTable).values({
           user_id: userId,
           video_id: videoId,
@@ -257,11 +266,7 @@ export async function POST(request: NextRequest) {
           platform: platform as any,
           scheduled_for: new Date(),
           status: postResult?.success ? "posted" : "failed",
-          caption:
-            platformCaption.text ||
-            platformCaption.title ||
-            video.caption ||
-            "",
+          captions: captionsObject,
           hashtags: hashtagsArray,
           platform_post_id: postResult?.postId || null,
           platform_url: postResult?.url || null,
@@ -297,7 +302,7 @@ export async function POST(request: NextRequest) {
 }
 
 // ============================================
-// INSTAGRAM POSTING (REELS)
+// INSTAGRAM POSTING
 // ============================================
 async function postToInstagram(
   connection: any,
@@ -313,7 +318,6 @@ async function postToInstagram(
 
     console.log("📸 Posting to Instagram Reels...");
 
-    // Create media container
     const containerResponse = await fetch(
       `https://graph.facebook.com/v21.0/${igAccountId}/media`,
       {
@@ -336,7 +340,6 @@ async function postToInstagram(
 
     const containerId = containerData.id;
 
-    // Poll for status
     let status = "IN_PROGRESS";
     let attempts = 0;
     const maxAttempts = 30;
@@ -360,7 +363,6 @@ async function postToInstagram(
       throw new Error(`Video processing failed. Status: ${status}`);
     }
 
-    // Publish
     const publishResponse = await fetch(
       `https://graph.facebook.com/v21.0/${igAccountId}/media_publish`,
       {
@@ -394,7 +396,7 @@ async function postToInstagram(
 }
 
 // ============================================
-// FACEBOOK POSTING - REELS LUB FEED
+// FACEBOOK POSTING
 // ============================================
 async function postToFacebook(
   connection: any,
@@ -427,7 +429,6 @@ async function postToFacebook(
   }
 }
 
-// Funkcja do postowania na Facebook Reels
 async function postToFacebookReels(
   pageId: string,
   accessToken: string,
@@ -435,7 +436,6 @@ async function postToFacebookReels(
 ): Promise<PostResult> {
   console.log("🎬 Creating Facebook Reel...");
 
-  // Step 1: Initialize upload session
   const initResponse = await fetch(
     `https://graph.facebook.com/v21.0/${pageId}/video_reels`,
     {
@@ -459,7 +459,6 @@ async function postToFacebookReels(
 
   console.log("✅ Upload session created:", videoId);
 
-  // Step 2: Upload video file
   const videoResponse = await fetch(video.video_url);
   const videoBlob = await videoResponse.blob();
 
@@ -478,7 +477,6 @@ async function postToFacebookReels(
 
   console.log("✅ Video uploaded");
 
-  // Step 3: Finalize and publish
   const publishResponse = await fetch(
     `https://graph.facebook.com/v21.0/${pageId}/video_reels`,
     {
@@ -509,7 +507,6 @@ async function postToFacebookReels(
   };
 }
 
-// Funkcja do postowania na Facebook Feed (zwykły post)
 async function postToFacebookFeed(
   pageId: string,
   accessToken: string,
@@ -565,7 +562,7 @@ async function postToFacebookFeed(
 }
 
 // ============================================
-// TIKTOK POSTING (TODO)
+// TIKTOK POSTING
 // ============================================
 async function postToTikTok(
   connection: any,
@@ -580,7 +577,6 @@ async function postToTikTok(
 
     console.log("🎵 Posting to TikTok...");
 
-    // Step 1: Initialize upload
     let initResponse = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/video/init/",
       {
@@ -592,7 +588,7 @@ async function postToTikTok(
         body: JSON.stringify({
           post_info: {
             title: video.caption?.slice(0, 150) || "Video Post",
-            privacy_level: "PUBLIC_TO_EVERYONE", // lub "SELF_ONLY" dla testów
+            privacy_level: "PUBLIC_TO_EVERYONE",
             disable_duet: false,
             disable_comment: false,
             disable_stitch: false,
@@ -610,7 +606,6 @@ async function postToTikTok(
 
     let initData = await initResponse.json();
 
-    // 🔄 Jeśli token wygasł, spróbuj odświeżyć
     if (
       initData.error &&
       (initData.error.code === "invalid_token" ||
@@ -629,7 +624,6 @@ async function postToTikTok(
 
       accessToken = newToken;
 
-      // Retry request z nowym tokenem
       initResponse = await fetch(
         "https://open.tiktokapis.com/v2/post/publish/video/init/",
         {
@@ -668,7 +662,6 @@ async function postToTikTok(
 
     console.log("✅ TikTok upload session created:", publish_id);
 
-    // Step 2: Upload video
     const videoResponse = await fetch(video.video_url);
     const videoBlob = await videoResponse.blob();
 
@@ -686,7 +679,6 @@ async function postToTikTok(
 
     console.log("✅ Video uploaded to TikTok");
 
-    // Step 3: Publish
     const publishResponse = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
       {
@@ -736,12 +728,10 @@ async function postToYouTube(
 
     console.log("▶️ Posting to YouTube Shorts...");
 
-    // Krok 1: Pobierz plik wideo
     const videoResponse = await fetch(video.video_url);
     const videoBlob = await videoResponse.blob();
     const videoBuffer = Buffer.from(await videoBlob.arrayBuffer());
 
-    // Krok 2: Przygotuj metadata dla YouTube
     const title = video.caption
       ? video.caption.slice(0, 100)
       : "Short Video #Shorts";
@@ -752,7 +742,7 @@ async function postToYouTube(
       title: title,
       description: description,
       tags: video.hashtags || [],
-      categoryId: "22", // 22 = People & Blogs
+      categoryId: "22",
     };
 
     const status = {
@@ -766,7 +756,6 @@ async function postToYouTube(
       tagsCount: (video.hashtags || []).length,
     });
 
-    // Krok 3: Utwórz resumable upload session
     const initResponse = await fetch(
       "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
       {
@@ -787,14 +776,12 @@ async function postToYouTube(
     if (!initResponse.ok) {
       const errorData = await initResponse.json();
 
-      // Jeśli token wygasł, spróbuj odświeżyć
       if (initResponse.status === 401 && refreshToken) {
         console.log("🔄 Token expired, refreshing...");
         const newAccessToken = await refreshYouTubeToken(
           refreshToken,
           connection.id
         );
-        // Retry z nowym tokenem
         return await postToYouTube(
           { ...connection, access_token: newAccessToken },
           video
@@ -813,7 +800,6 @@ async function postToYouTube(
 
     console.log("✅ Upload session created");
 
-    // Krok 4: Upload pliku wideo
     const uploadResponse = await fetch(uploadUrl, {
       method: "PUT",
       headers: {
@@ -848,7 +834,7 @@ async function postToYouTube(
 }
 
 // ============================================
-// REFRESH YOUTUBE TOKEN
+// REFRESH TOKENS
 // ============================================
 async function refreshYouTubeToken(
   refreshToken: string,
@@ -875,9 +861,8 @@ async function refreshYouTubeToken(
     }
 
     const newAccessToken = data.access_token;
-    const expiresIn = data.expires_in; // seconds
+    const expiresIn = data.expires_in;
 
-    // Zaktualizuj token w bazie danych
     await db
       .update(socialConnectionsTable)
       .set({
@@ -895,6 +880,7 @@ async function refreshYouTubeToken(
     throw error;
   }
 }
+
 async function refreshTikTokToken(
   refreshToken: string,
   connectionId: string
@@ -934,7 +920,6 @@ async function refreshTikTokToken(
     const newRefreshToken = data.data.refresh_token;
     const expiresIn = data.data.expires_in;
 
-    // Zaktualizuj token w bazie danych
     await db
       .update(socialConnectionsTable)
       .set({
