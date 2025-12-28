@@ -575,7 +575,41 @@ async function postToTikTok(
       throw new Error("TikTok access token not found");
     }
 
-    console.log("🎵 Posting to TikTok...");
+    console.log("🎵 === STARTING TIKTOK POST ===");
+    console.log("📋 Connection info:", {
+      platform_username: connection.platform_username,
+      platform_user_id: connection.platform_user_id,
+      has_access_token: !!accessToken,
+      has_refresh_token: !!connection.refresh_token,
+      token_expires_at: connection.token_expires_at,
+    });
+    console.log("🎬 Video info:", {
+      caption: video.caption?.slice(0, 50),
+      video_url: video.video_url,
+      style: video.style,
+    });
+
+    // Step 1: Initialize upload
+    console.log("📤 Step 1: Initializing TikTok upload...");
+
+    const initPayload = {
+      post_info: {
+        title: video.caption?.slice(0, 150) || "Video Post",
+        privacy_level: "SELF_ONLY", // ⚠️ ZMIEŃ NA SELF_ONLY dla testów!
+        disable_duet: false,
+        disable_comment: false,
+        disable_stitch: false,
+        video_cover_timestamp_ms: 1000,
+      },
+      source_info: {
+        source: "FILE_UPLOAD",
+        video_size: 0,
+        chunk_size: 10000000,
+        total_chunk_count: 1,
+      },
+    };
+
+    console.log("📦 Init payload:", JSON.stringify(initPayload, null, 2));
 
     let initResponse = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/video/init/",
@@ -585,33 +619,22 @@ async function postToTikTok(
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          post_info: {
-            title: video.caption?.slice(0, 150) || "Video Post",
-            privacy_level: "PUBLIC_TO_EVERYONE",
-            disable_duet: false,
-            disable_comment: false,
-            disable_stitch: false,
-            video_cover_timestamp_ms: 1000,
-          },
-          source_info: {
-            source: "FILE_UPLOAD",
-            video_size: 0,
-            chunk_size: 10000000,
-            total_chunk_count: 1,
-          },
-        }),
+        body: JSON.stringify(initPayload),
       }
     );
 
-    let initData = await initResponse.json();
+    console.log("📥 Init response status:", initResponse.status);
 
+    let initData = await initResponse.json();
+    console.log("📥 Init response data:", JSON.stringify(initData, null, 2));
+
+    // 🔄 Token refresh if needed
     if (
       initData.error &&
       (initData.error.code === "invalid_token" ||
         initData.error.code === "access_token_invalid")
     ) {
-      console.log("🔄 TikTok token expired, refreshing...");
+      console.log("🔄 Token expired, refreshing...");
 
       const newToken = await refreshTikTokToken(
         connection.refresh_token,
@@ -624,6 +647,8 @@ async function postToTikTok(
 
       accessToken = newToken;
 
+      console.log("✅ Token refreshed, retrying init...");
+
       initResponse = await fetch(
         "https://open.tiktokapis.com/v2/post/publish/video/init/",
         {
@@ -632,38 +657,48 @@ async function postToTikTok(
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            post_info: {
-              title: video.caption?.slice(0, 150) || "Video Post",
-              privacy_level: "PUBLIC_TO_EVERYONE",
-              disable_duet: false,
-              disable_comment: false,
-              disable_stitch: false,
-              video_cover_timestamp_ms: 1000,
-            },
-            source_info: {
-              source: "FILE_UPLOAD",
-              video_size: 0,
-              chunk_size: 10000000,
-              total_chunk_count: 1,
-            },
-          }),
+          body: JSON.stringify(initPayload),
         }
       );
 
       initData = await initResponse.json();
+      console.log(
+        "📥 Init response after refresh:",
+        JSON.stringify(initData, null, 2)
+      );
     }
 
     if (initData.error) {
-      throw new Error(`TikTok Init Error: ${initData.error.message}`);
+      console.error("❌ TikTok Init Error:", initData.error);
+      throw new Error(`TikTok Init Error: ${JSON.stringify(initData.error)}`);
+    }
+
+    if (
+      !initData.data ||
+      !initData.data.publish_id ||
+      !initData.data.upload_url
+    ) {
+      console.error("❌ Missing data in init response:", initData);
+      throw new Error("TikTok API returned invalid init data");
     }
 
     const { publish_id, upload_url } = initData.data;
 
-    console.log("✅ TikTok upload session created:", publish_id);
+    console.log("✅ Upload session created!");
+    console.log("🆔 Publish ID:", publish_id);
+    console.log("🔗 Upload URL:", upload_url?.substring(0, 50) + "...");
+
+    // Step 2: Upload video
+    console.log("📤 Step 2: Uploading video file...");
 
     const videoResponse = await fetch(video.video_url);
+
+    if (!videoResponse.ok) {
+      throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
+    }
+
     const videoBlob = await videoResponse.blob();
+    console.log("📦 Video size:", videoBlob.size, "bytes");
 
     const uploadResponse = await fetch(upload_url, {
       method: "PUT",
@@ -673,13 +708,25 @@ async function postToTikTok(
       },
     });
 
+    console.log("📥 Upload response status:", uploadResponse.status);
+
     if (!uploadResponse.ok) {
-      throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+      const uploadError = await uploadResponse.text();
+      console.error("❌ Upload failed:", uploadError);
+      throw new Error(
+        `Upload failed: ${uploadResponse.statusText} - ${uploadError}`
+      );
     }
 
-    console.log("✅ Video uploaded to TikTok");
+    console.log("✅ Video uploaded successfully!");
 
-    const publishResponse = await fetch(
+    // Step 3: Check publish status
+    console.log("📤 Step 3: Checking publish status...");
+
+    // Czekaj chwilę przed sprawdzeniem statusu
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
       {
         method: "POST",
@@ -693,17 +740,38 @@ async function postToTikTok(
       }
     );
 
-    const publishData = await publishResponse.json();
+    console.log("📥 Status response status:", statusResponse.status);
 
-    console.log("🎉 TikTok video published!");
+    const statusData = await statusResponse.json();
+    console.log(
+      "📥 Status response data:",
+      JSON.stringify(statusData, null, 2)
+    );
 
+    if (statusData.error) {
+      console.error("❌ Status check error:", statusData.error);
+      // Nie rzucaj błędu - video może być już uploadowane
+      console.log("⚠️ Status check failed, but video might be uploaded");
+    }
+
+    // Sprawdź czy video jest dostępne
+    if (statusData.data) {
+      console.log("📊 Publish status:", statusData.data.status);
+      console.log("📊 Publish info:", statusData.data);
+    }
+
+    console.log("🎉 === TIKTOK POST COMPLETED ===");
+
+    // Zwróć sukces z publish_id
     return {
       success: true,
       postId: publish_id,
       url: `https://www.tiktok.com/@${connection.platform_username}/video/${publish_id}`,
     };
   } catch (error: any) {
-    console.error("❌ TikTok error:", error);
+    console.error("❌ === TIKTOK POST FAILED ===");
+    console.error("❌ Error:", error);
+    console.error("❌ Stack:", error.stack);
     return {
       success: false,
       error: error.message || "Failed to post to TikTok",
