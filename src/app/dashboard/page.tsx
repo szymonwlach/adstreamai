@@ -78,11 +78,11 @@ const Dashboard = () => {
     if (params.has("youtube")) {
       const status = params.get("youtube");
       if (status === "connected") {
-        setTimeout(() => {
-          alert(
-            "🎉 YouTube connected successfully!\n\nYou can now upload videos to YouTube Shorts."
-          );
-        }, 500);
+        // setTimeout(() => {
+        //   alert(
+        //     "🎉 YouTube connected successfully!\n\nYou can now upload videos to YouTube Shorts."
+        //   );
+        // }, 500);
         // Clean URL
         window.history.replaceState({}, "", "/dashboard#connect");
       }
@@ -90,11 +90,11 @@ const Dashboard = () => {
     if (params.has("tiktok")) {
       const status = params.get("tiktok");
       if (status === "connected") {
-        setTimeout(() => {
-          alert(
-            "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
-          );
-        }, 500);
+        // setTimeout(() => {
+        //   alert(
+        //     "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
+        //   );
+        // }, 500);
         window.history.replaceState({}, "", "/dashboard#connect");
       }
     }
