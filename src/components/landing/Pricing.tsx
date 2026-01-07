@@ -99,12 +99,12 @@ export const Pricing = () => {
   }, []);
 
   const formatTime = (seconds) => {
-    const days = Math.floor(seconds / (24 * 3600));
-    const hours = Math.floor((seconds % (24 * 3600)) / 3600);
+    const totalHours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    return `${days}d ${hours.toString().padStart(2, "0")}h ${minutes
+    const secs = seconds % 60;
+    return `${totalHours}h ${minutes.toString().padStart(2, "0")}m ${secs
       .toString()
-      .padStart(2, "0")}m`;
+      .padStart(2, "0")}s`;
   };
 
   const handleClick = async () => {
@@ -128,7 +128,7 @@ export const Pricing = () => {
       )}
 
       {/* Promo Banner */}
-      <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 py-3.5 z-20 shadow-lg">
+      <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-primary via-accent to-primary py-3.5 z-20 shadow-lg">
         <div className="container mx-auto px-4 flex items-center justify-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <TrendingDown className="w-5 h-5 text-white animate-bounce" />
@@ -150,12 +150,12 @@ export const Pricing = () => {
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
             <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
             </span>
-            <span className="text-sm font-semibold text-emerald-700">
+            <span className="text-sm font-semibold text-primary">
               Limited Time Pricing
             </span>
           </div>
@@ -166,8 +166,8 @@ export const Pricing = () => {
           <p className="text-lg text-muted-foreground mb-8">
             Simple credit-based pricing. ~15 credits = 1 video ad.
             <br />
-            <span className="text-emerald-600 font-semibold">
-              Lock in these promotional prices for 3 months! 🔒
+            <span className="text-primary font-semibold">
+              Promotional pricing for your first 3 months! 🔒
             </span>
           </p>
 
@@ -195,7 +195,7 @@ export const Pricing = () => {
           </div>
 
           {isYearly && (
-            <p className="text-sm text-emerald-600 font-semibold mt-4">
+            <p className="text-sm text-primary font-semibold mt-4">
               💰 Save even more with annual billing
             </p>
           )}
@@ -218,8 +218,8 @@ export const Pricing = () => {
                 {/* Discount Badge */}
                 <div className="absolute -top-3 -right-3 z-10">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-emerald-500 rounded-full blur-md opacity-50 animate-pulse"></div>
-                    <div className="relative bg-gradient-to-br from-emerald-500 to-teal-500 text-white font-bold text-sm px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white">
+                    <div className="absolute inset-0 bg-primary rounded-full blur-md opacity-50 animate-pulse"></div>
+                    <div className="relative bg-gradient-to-br from-primary to-accent text-white font-bold text-sm px-3.5 py-1.5 rounded-full shadow-lg border-2 border-white">
                       SAVE {tier.discount}
                     </div>
                   </div>
@@ -266,23 +266,24 @@ export const Pricing = () => {
                         </span>
                       </div>
                       <div className="flex items-baseline justify-center gap-2">
-                        <span className="text-6xl font-bold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                        <span className="text-6xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                           ${promoPrice}
                         </span>
                         <div className="flex flex-col">
                           <span className="text-muted-foreground text-sm">
                             /{isYearly ? "mo" : "month"}
                           </span>
-                          <span className="text-xs text-emerald-600 font-semibold">
-                            for 3 months
-                          </span>
                         </div>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        Then ${originalPrice}/{isYearly ? "mo" : "month"} after
+                        3 months
                       </div>
                     </div>
 
                     <div className="flex justify-center">
-                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                        <span className="text-sm font-bold text-emerald-700">
+                      <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                        <span className="text-sm font-bold text-primary">
                           {tier.credits} credits
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -293,24 +294,20 @@ export const Pricing = () => {
                   </div>
 
                   <Button
-                    className={`w-full mb-6 h-12 text-base font-semibold relative overflow-hidden group ${
-                      tier.popular
-                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 text-white"
-                        : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                    className={`w-full mb-6 h-12 text-base font-semibold group bg-gradient-to-r from-primary to-accent hover:opacity-90 shadow-lg glow-primary transition-all ${
+                      tier.popular ? "shadow-primary/30" : ""
                     }`}
                     onClick={handleClick}
                   >
-                    <span className="relative z-10 flex items-center justify-center">
-                      Claim This Deal
-                      <ArrowRight className="ml-2 w-5 h-5" />
-                    </span>
+                    Claim This Deal
+                    <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
 
                   <div className="space-y-3">
                     {tier.features.map((feature, i) => (
                       <div key={i} className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                          <Check className="w-5 h-5 text-primary flex-shrink-0" />
                         </div>
                         <span className="text-sm text-muted-foreground leading-relaxed">
                           {feature}
@@ -325,7 +322,7 @@ export const Pricing = () => {
         </div>
 
         <div className="max-w-4xl mx-auto space-y-4 text-center">
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50">
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 border border-primary/20">
             <p className="text-sm text-muted-foreground mb-3">
               <span className="font-semibold text-foreground">
                 All plans include:
@@ -334,7 +331,7 @@ export const Pricing = () => {
               • Cancel anytime
             </p>
             <p className="text-sm mb-3">
-              <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+              <span className="text-primary font-bold">
                 ⚡ Early Bird Bonus:
               </span>{" "}
               <span className="text-foreground">
@@ -347,7 +344,7 @@ export const Pricing = () => {
               Need 2000+ videos/month or custom features?{" "}
               <a
                 href="/contact"
-                className="text-emerald-600 hover:underline font-semibold"
+                className="text-primary hover:underline font-semibold"
               >
                 Contact our sales team →
               </a>
@@ -360,7 +357,7 @@ export const Pricing = () => {
                 Start with 50 free credits • No credit card required • Upgrade
                 anytime
               </p>
-              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <p className="text-sm font-semibold text-primary">
                 🎯 Join 500+ creators already creating amazing content!
               </p>
             </div>

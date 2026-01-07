@@ -25,9 +25,9 @@ export default function HomePage() {
       <div id="features">
         <Features />
       </div>
-      <div id="platforms">
+      {/* <div id="platforms">
         <Platforms />
-      </div>
+      </div> */}
       <Pricing />
       <CTA />
       <div id="footer">
