@@ -7,13 +7,20 @@ import { Pricing } from "@/components/landing/Pricing";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
 import ComingSoon from "@/components/landing/ComingSoon";
+import AdTransformationShowcase from "@/components/landing/Showcase";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       {/* <ComingSoon /> */}
-      <Hero />
+      <div className="">
+        <Hero />
+      </div>
+      <div className="-mt-28">
+        <AdTransformationShowcase />
+      </div>
+
       <HowItWorks />
       <div id="features">
         <Features />

@@ -47,7 +47,7 @@ export const Footer = () => {
 
         <div className="border-t border-border/50 mt-8 pt-8">
           <p className="text-sm text-muted-foreground text-center">
-            © 2025 AdStream AI. All rights reserved.
+            © 2026 AdStream AI. All rights reserved.
           </p>
         </div>
       </div>

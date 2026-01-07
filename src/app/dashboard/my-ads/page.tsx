@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Info,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -742,10 +743,11 @@ const MyContent = () => {
                                         {videoIcon}
                                       </div>
                                     </div>
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center rounded-lg">
                                       <div className="text-center text-white">
-                                        <Clock className="w-8 h-8 mx-auto mb-2 animate-spin" />
-                                        <p className="text-sm font-medium">
+                                        {/* Loader2 wygląda znacznie lepiej przy animacji spin */}
+                                        <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-white/90" />
+                                        <p className="text-sm font-medium tracking-wide">
                                           Generating...
                                         </p>
                                       </div>

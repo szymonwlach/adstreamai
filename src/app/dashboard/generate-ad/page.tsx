@@ -276,7 +276,6 @@ const GenerateAdContent = () => {
     userCredits >= creditsNeeded &&
     creditsNeeded > 0 &&
     productImages.length > 0;
-
   const handleGenerate = async () => {
     const {
       data: { session },
@@ -332,6 +331,8 @@ const GenerateAdContent = () => {
       const { projectId, campaignId: newCampaignId } =
         await saveResponse.json();
 
+      // 🔥 KLUCZOWA ZMIANA: Najpierw wysyłamy do n8n
+      console.log("📤 Sending to n8n...");
       const n8nResponse = await fetch("/api/sendToN8n", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -355,8 +356,24 @@ const GenerateAdContent = () => {
       const n8nData = await n8nResponse.json();
 
       if (!n8nResponse.ok) {
+        // 🔥 Jeśli n8n zwróci błąd, musimy usunąć zapisany projekt
+        console.error("❌ n8n error, rolling back...");
+
+        // Wywołaj API do usunięcia projektu (musisz stworzyć ten endpoint)
+        await fetch("/api/deleteAd", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            project_id: projectId,
+            campaign_id: newCampaignId,
+          }),
+        }).catch((err) => console.error("Rollback failed:", err));
+
         throw new Error(n8nData.error || "Failed to send to n8n");
       }
+
+      // ✅ Sukces - wszystko poszło dobrze
+      console.log("✅ Success!");
 
       if (campaignId) {
         toast.success("More ads are being generated!", {

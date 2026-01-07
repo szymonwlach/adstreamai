@@ -576,26 +576,109 @@ async function postToTikTok(
     }
 
     console.log("🎵 === STARTING TIKTOK POST ===");
-    console.log("📋 Connection info:", {
-      platform_username: connection.platform_username,
-      platform_user_id: connection.platform_user_id,
-      has_access_token: !!accessToken,
-      has_refresh_token: !!connection.refresh_token,
-      token_expires_at: connection.token_expires_at,
-    });
-    console.log("🎬 Video info:", {
-      caption: video.caption?.slice(0, 50),
-      video_url: video.video_url,
-      style: video.style,
-    });
+    console.log("👤 Username:", connection.platform_username);
+    console.log(
+      "🔑 Token (first 20 chars):",
+      accessToken.substring(0, 20) + "..."
+    );
 
-    // Step 1: Initialize upload
-    console.log("📤 Step 1: Initializing TikTok upload...");
+    // ✅ KROK 1: Pobierz info o użytkowniku (sprawdź czy token działa)
+    console.log("📋 Fetching user info to verify token...");
+    const userInfoResponse = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
+    const userInfo = await userInfoResponse.json();
+    console.log("👤 User info response:", JSON.stringify(userInfo, null, 2));
+
+    // TikTok zwraca error.code === "ok" gdy wszystko jest OK
+    if (userInfo.error && userInfo.error.code !== "ok") {
+      console.error("❌ Token invalid or expired");
+
+      // Próba odświeżenia tokenu
+      if (connection.refresh_token) {
+        console.log("🔄 Attempting token refresh...");
+        const newToken = await refreshTikTokToken(
+          connection.refresh_token,
+          connection.id
+        );
+
+        if (!newToken) {
+          throw new Error(
+            "Token expired. Please reconnect your TikTok account."
+          );
+        }
+
+        accessToken = newToken;
+        console.log("✅ Token refreshed successfully");
+      } else {
+        throw new Error("Token invalid and no refresh token available");
+      }
+    } else {
+      console.log("✅ Token valid, user:", userInfo.data?.display_name);
+    }
+
+    // ✅ KROK 2: Pobierz video i sprawdź jego rozmiar
+    console.log("📥 Fetching video to get size...");
+    const videoResponse = await fetch(video.video_url);
+
+    if (!videoResponse.ok) {
+      throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
+    }
+
+    const videoBlob = await videoResponse.blob();
+    const videoSize = videoBlob.size;
+
+    console.log(
+      "📦 Video size:",
+      videoSize,
+      "bytes (",
+      (videoSize / 1024 / 1024).toFixed(2),
+      "MB)"
+    );
+
+    // Sprawdź limity TikTok
+    const MAX_SIZE = 287 * 1024 * 1024; // 287 MB
+    const MIN_SIZE = 1024 * 1024; // 1 MB
+
+    if (videoSize > MAX_SIZE) {
+      throw new Error(
+        `Video too large: ${(videoSize / 1024 / 1024).toFixed(2)}MB (max 287MB)`
+      );
+    }
+
+    if (videoSize < MIN_SIZE) {
+      throw new Error(
+        `Video too small: ${(videoSize / 1024).toFixed(2)}KB (min 1MB)`
+      );
+    }
+
+    // ✅ KROK 3: Oblicz chunk size
+    const chunkSize = Math.min(videoSize, 10000000); // Max 10MB per chunk
+    const totalChunkCount = Math.ceil(videoSize / chunkSize);
+
+    console.log(
+      "📦 Chunks:",
+      totalChunkCount,
+      "x",
+      (chunkSize / 1024 / 1024).toFixed(2),
+      "MB"
+    );
+
+    // ✅ KROK 4: Przygotuj caption (max 150 znaków dla TikTok)
+    const title = video.caption?.slice(0, 150) || "Video Post";
+    console.log("📝 Title:", title);
+
+    // ✅ KROK 5: Przygotuj payload - SELF_ONLY dla sandbox mode
     const initPayload = {
       post_info: {
-        title: video.caption?.slice(0, 150) || "Video Post",
-        privacy_level: "SELF_ONLY", // ⚠️ ZMIEŃ NA SELF_ONLY dla testów!
+        title: title,
+        privacy_level: "SELF_ONLY", // ⚠️ SELF_ONLY dla sandbox - zmień na PUBLIC_TO_EVERYONE po weryfikacji
         disable_duet: false,
         disable_comment: false,
         disable_stitch: false,
@@ -603,15 +686,18 @@ async function postToTikTok(
       },
       source_info: {
         source: "FILE_UPLOAD",
-        video_size: 0,
-        chunk_size: 10000000,
-        total_chunk_count: 1,
+        video_size: videoSize,
+        chunk_size: chunkSize,
+        total_chunk_count: totalChunkCount,
       },
     };
 
     console.log("📦 Init payload:", JSON.stringify(initPayload, null, 2));
 
-    let initResponse = await fetch(
+    // ✅ KROK 6: Initialize upload
+    console.log("📤 Step 1: Initializing TikTok upload...");
+
+    const initResponse = await fetch(
       "https://open.tiktokapis.com/v2/post/publish/video/init/",
       {
         method: "POST",
@@ -625,52 +711,30 @@ async function postToTikTok(
 
     console.log("📥 Init response status:", initResponse.status);
 
-    let initData = await initResponse.json();
+    const initData = await initResponse.json();
     console.log("📥 Init response data:", JSON.stringify(initData, null, 2));
-
-    // 🔄 Token refresh if needed
-    if (
-      initData.error &&
-      (initData.error.code === "invalid_token" ||
-        initData.error.code === "access_token_invalid")
-    ) {
-      console.log("🔄 Token expired, refreshing...");
-
-      const newToken = await refreshTikTokToken(
-        connection.refresh_token,
-        connection.id
-      );
-
-      if (!newToken) {
-        throw new Error("Token expired. Please reconnect your TikTok account.");
-      }
-
-      accessToken = newToken;
-
-      console.log("✅ Token refreshed, retrying init...");
-
-      initResponse = await fetch(
-        "https://open.tiktokapis.com/v2/post/publish/video/init/",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(initPayload),
-        }
-      );
-
-      initData = await initResponse.json();
-      console.log(
-        "📥 Init response after refresh:",
-        JSON.stringify(initData, null, 2)
-      );
-    }
 
     if (initData.error) {
       console.error("❌ TikTok Init Error:", initData.error);
-      throw new Error(`TikTok Init Error: ${JSON.stringify(initData.error)}`);
+
+      // Konkretne komunikaty błędów
+      if (
+        initData.error.code ===
+        "unaudited_client_can_only_post_to_private_accounts"
+      ) {
+        throw new Error(
+          "⚠️ SANDBOX MODE: Your app is not verified. Change your TikTok account to PUBLIC + BUSINESS/CREATOR, " +
+            "then reconnect. Video will be saved as DRAFT. To post publicly, submit app for review at: " +
+            "https://developers.tiktok.com"
+        );
+      } else if (
+        initData.error.code === "invalid_token" ||
+        initData.error.code === "access_token_invalid"
+      ) {
+        throw new Error("Token expired. Please reconnect your TikTok account.");
+      } else {
+        throw new Error(`TikTok Init Error: ${JSON.stringify(initData.error)}`);
+      }
     }
 
     if (
@@ -686,25 +750,21 @@ async function postToTikTok(
 
     console.log("✅ Upload session created!");
     console.log("🆔 Publish ID:", publish_id);
-    console.log("🔗 Upload URL:", upload_url?.substring(0, 50) + "...");
+    console.log(
+      "🔗 Upload URL (first 50 chars):",
+      upload_url.substring(0, 50) + "..."
+    );
 
-    // Step 2: Upload video
+    // ✅ KROK 7: Upload video
     console.log("📤 Step 2: Uploading video file...");
-
-    const videoResponse = await fetch(video.video_url);
-
-    if (!videoResponse.ok) {
-      throw new Error(`Failed to fetch video: ${videoResponse.statusText}`);
-    }
-
-    const videoBlob = await videoResponse.blob();
-    console.log("📦 Video size:", videoBlob.size, "bytes");
+    console.log("⏳ This may take a while for large videos...");
 
     const uploadResponse = await fetch(upload_url, {
       method: "PUT",
       body: videoBlob,
       headers: {
         "Content-Type": "video/mp4",
+        "Content-Length": videoSize.toString(),
       },
     });
 
@@ -713,64 +773,133 @@ async function postToTikTok(
     if (!uploadResponse.ok) {
       const uploadError = await uploadResponse.text();
       console.error("❌ Upload failed:", uploadError);
-      throw new Error(
-        `Upload failed: ${uploadResponse.statusText} - ${uploadError}`
-      );
+      throw new Error(`Upload failed: ${uploadResponse.statusText}`);
     }
 
     console.log("✅ Video uploaded successfully!");
 
-    // Step 3: Check publish status
+    // ✅ KROK 8: Check status with detailed logging
     console.log("📤 Step 3: Checking publish status...");
-
-    // Czekaj chwilę przed sprawdzeniem statusu
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const statusResponse = await fetch(
-      "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          publish_id: publish_id,
-        }),
-      }
-    );
-
-    console.log("📥 Status response status:", statusResponse.status);
-
-    const statusData = await statusResponse.json();
     console.log(
-      "📥 Status response data:",
-      JSON.stringify(statusData, null, 2)
+      "⏳ Waiting for video processing (checking every 3 seconds for up to 60 seconds)..."
     );
 
-    if (statusData.error) {
-      console.error("❌ Status check error:", statusData.error);
-      // Nie rzucaj błędu - video może być już uploadowane
-      console.log("⚠️ Status check failed, but video might be uploaded");
+    let processingAttempts = 0;
+    const maxAttempts = 20; // 60 seconds total
+    let videoStatus = "PROCESSING_UPLOAD";
+    let statusData: any = null;
+
+    while (processingAttempts < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const statusResponse = await fetch(
+        "https://open.tiktokapis.com/v2/post/publish/status/fetch/",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ publish_id: publish_id }),
+        }
+      );
+
+      statusData = await statusResponse.json();
+      processingAttempts++;
+
+      console.log(
+        `\n📊 Status check #${processingAttempts}/${maxAttempts} (${
+          processingAttempts * 3
+        }s elapsed):`
+      );
+      console.log(JSON.stringify(statusData, null, 2));
+
+      if (statusData.error) {
+        console.error("❌ Status check error:", statusData.error);
+        break;
+      }
+
+      if (statusData.data && statusData.data.status) {
+        videoStatus = statusData.data.status;
+        console.log(`🎬 Current status: ${videoStatus}`);
+
+        if (videoStatus === "PUBLISH_COMPLETE") {
+          console.log("✅ Video published successfully!");
+          break;
+        } else if (videoStatus === "FAILED") {
+          console.log("❌ Video publishing failed!");
+          if (statusData.data.fail_reason) {
+            console.log("❌ Fail reason:", statusData.data.fail_reason);
+          }
+          throw new Error(
+            `Publishing failed: ${
+              statusData.data.fail_reason || "Unknown reason"
+            }`
+          );
+        } else if (
+          videoStatus === "PROCESSING_UPLOAD" ||
+          videoStatus === "PROCESSING_DOWNLOAD"
+        ) {
+          console.log("⏳ Still processing...");
+        } else {
+          console.log("ℹ️ Unexpected status:", videoStatus);
+        }
+      } else {
+        console.log("⚠️ No status in response");
+      }
     }
 
-    // Sprawdź czy video jest dostępne
-    if (statusData.data) {
-      console.log("📊 Publish status:", statusData.data.status);
-      console.log("📊 Publish info:", statusData.data);
+    // ✅ KROK 9: Final report
+    console.log("\n📊 === FINAL STATUS REPORT ===");
+    console.log("Publish ID:", publish_id);
+    console.log("Final Status:", videoStatus);
+    console.log("Processing Attempts:", processingAttempts);
+    console.log("Time Elapsed:", processingAttempts * 3, "seconds");
+
+    // Detailed instructions based on status
+    if (videoStatus === "PUBLISH_COMPLETE") {
+      console.log("\n✅ SUCCESS!");
+      console.log("📱 Check your TikTok profile:");
+      console.log("   1. Open TikTok app");
+      console.log("   2. Go to Profile");
+      console.log("   3. Tap ☰ (hamburger menu top-right)");
+      console.log("   4. Creator tools → Drafts (or Content)");
+      console.log("   5. Video should be there as DRAFT/PRIVATE");
+    } else if (
+      videoStatus === "PROCESSING_UPLOAD" ||
+      videoStatus === "PROCESSING_DOWNLOAD"
+    ) {
+      console.log("\n⏳ VIDEO STILL PROCESSING");
+      console.log(
+        "This is normal - TikTok can take 5-30 minutes to process video."
+      );
+      console.log("\n📱 Where to check:");
+      console.log("   1. Open TikTok app");
+      console.log("   2. Profile → ☰ (hamburger menu top-right)");
+      console.log("   3. Creator tools → Drafts");
+      console.log("   4. Or check: Profile → Videos (may appear as private)");
+      console.log(
+        "\n⏰ If not visible after 30 minutes, the upload may have failed."
+      );
+    } else if (videoStatus === "FAILED") {
+      console.log("\n❌ UPLOAD FAILED");
+      console.log("Reason:", statusData?.data?.fail_reason || "Unknown");
     }
 
-    console.log("🎉 === TIKTOK POST COMPLETED ===");
+    console.log("\n🔗 Publish ID for tracking:", publish_id);
+    console.log("🎉 === TIKTOK POST COMPLETED ===\n");
 
-    // Zwróć sukces z publish_id
     return {
-      success: true,
+      success:
+        videoStatus === "PUBLISH_COMPLETE" ||
+        videoStatus === "PROCESSING_UPLOAD" ||
+        videoStatus === "PROCESSING_DOWNLOAD",
       postId: publish_id,
       url: `https://www.tiktok.com/@${connection.platform_username}/video/${publish_id}`,
     };
   } catch (error: any) {
-    console.error("❌ === TIKTOK POST FAILED ===");
-    console.error("❌ Error:", error);
+    console.error("\n❌ === TIKTOK POST FAILED ===");
+    console.error("❌ Error:", error.message);
     console.error("❌ Stack:", error.stack);
     return {
       success: false,
@@ -778,7 +907,6 @@ async function postToTikTok(
     };
   }
 }
-
 // ============================================
 // YOUTUBE SHORTS POSTING
 // ============================================

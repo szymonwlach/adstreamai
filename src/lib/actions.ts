@@ -20,10 +20,25 @@ interface Ad {
 }
 
 export async function AddUser(user: AddUser) {
-  await db.insert(usersTable).values({
-    id: user.id,
-    email: user.email,
-  });
+  console.log("Inserting user:", user);
+  try {
+    await db.insert(usersTable).values({
+      id: user.id,
+      email: user.email,
+    });
+    console.log("User inserted successfully");
+  } catch (error: any) {
+    console.log("Error code:", error.code);
+    console.log("Error cause code:", error.cause?.code);
+    console.log("Error message:", error.message);
+    // If user already exists, ignore the error
+    if (error.code === "23505" || error.cause?.code === "23505") {
+      // PostgreSQL unique violation
+      console.log("User already exists, skipping insert");
+    } else {
+      throw error;
+    }
+  }
 }
 
 export async function saveAd(ad_obj: Ad) {

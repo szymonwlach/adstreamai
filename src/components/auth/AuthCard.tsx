@@ -60,6 +60,10 @@ export function AuthCard({ className, ...props }: React.ComponentProps<"div">) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
+        // Ensure user is in database
+        if (session.user.id && session.user.email) {
+          await addUserToDB({ id: session.user.id, email: session.user.email });
+        }
         toast({
           title: "Success!",
           description: "Redirecting to dashboard...",

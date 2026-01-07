@@ -90,11 +90,11 @@ const Dashboard = () => {
     if (params.has("tiktok")) {
       const status = params.get("tiktok");
       if (status === "connected") {
-        // setTimeout(() => {
-        //   alert(
-        //     "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
-        //   );
-        // }, 500);
+        setTimeout(() => {
+          alert(
+            "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
+          );
+        }, 500);
         window.history.replaceState({}, "", "/dashboard#connect");
       }
     }
