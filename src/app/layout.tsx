@@ -40,7 +40,7 @@ export default function RootLayout({
             <ClientToaster />
             <Sonner />
             {children}
-            <CookieConsent />
+            {/* <CookieConsent /> */}
           </TooltipProvider>
         </ReactQueryProvider>
       </body>

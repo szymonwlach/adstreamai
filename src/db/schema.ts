@@ -123,10 +123,13 @@ export const projectsTable = pgTable("projects", {
   status: projectStatusEnum("status").notNull().default("processing"),
   quality: text("quality").notNull(),
   duration: integer("duration"),
+  subtitles_enabled: boolean("subtitles_enabled").notNull().default(false),
+  subtitle_style: text("subtitle_style"),
+  color_scheme: text("color_scheme"),
+  music_enabled: boolean("music_enabled").notNull().default(true),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
-
 // ============================================
 // AI GENERATED VIDEOS
 // ============================================
@@ -140,12 +143,10 @@ export const videosTable = pgTable("videos", {
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   video_url: text("video_url").notNull(),
-  thumbnail_url: text("thumbnail_url"),
+  // thumbnail_url: text("thumbnail_url"),
   style: videoStyleEnum("style").notNull(),
-  caption: text("caption"),
-  hashtags: text("hashtags").array(),
-
-  // ✨ NOWE POLE - AI Generated Captions dla wszystkich platform
+  // caption: text("caption"),
+  // hashtags: text("hashtags").array(),
   ai_captions: jsonb("ai_captions").$type<{
     instagram?: {
       text: string;

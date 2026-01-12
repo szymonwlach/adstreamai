@@ -18,6 +18,11 @@ export async function POST(req: NextRequest) {
       quality,
       duration,
       plan,
+      // NOWE PARAMETRY:
+      subtitles_enabled,
+      subtitle_style,
+      music_enabled,
+      color_scheme,
     } = body;
 
     console.log("📦 Received body:", body);
@@ -30,7 +35,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔥 WAŻNE: Ustaw prawidłowy URL webhooka z n8n
     const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
 
     if (!n8nWebhookUrl) {
@@ -41,7 +45,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Obsłuż zarówno single image jak i array
+    // Obsługa obrazów
     let imageUrls;
     if (product_images && Array.isArray(product_images)) {
       imageUrls = product_images;
@@ -51,12 +55,7 @@ export async function POST(req: NextRequest) {
       imageUrls = [];
     }
 
-    if (imageUrls.length === 0) {
-      console.warn("⚠️ WARNING: No product images provided!");
-    }
-
-    console.log(`📸 Processing ${imageUrls.length} image(s):`, imageUrls);
-
+    // Przygotowanie finalnego payloadu do n8n
     const payload = {
       project_id,
       campaign_id: campaign_id || null,
@@ -70,6 +69,11 @@ export async function POST(req: NextRequest) {
       quality: quality || "720p",
       duration: duration || 10,
       plan: plan?.plan || plan || "free",
+      // NOWE POLA W PAYLOADZIE:
+      subtitles_enabled: !!subtitles_enabled, // wymuszenie boolean
+      subtitle_style: subtitles_enabled ? subtitle_style : null,
+      music_enabled: !!music_enabled, // wymuszenie boolean
+      color_scheme: subtitles_enabled ? color_scheme : null,
     };
 
     console.log("🚀 Sending to n8n:", payload);

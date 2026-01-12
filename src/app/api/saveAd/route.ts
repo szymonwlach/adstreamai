@@ -11,14 +11,19 @@ export async function POST(req: NextRequest) {
 
     let {
       user_id,
-      name, // Now optional
-      description, // Now optional
+      name,
+      description,
       product_url,
       selected_style,
       language,
       quality,
       duration,
-      campaign_id, // Optional: if provided, add to existing campaign
+      campaign_id,
+      // Nowe parametry stylu i audio
+      subtitles_enabled,
+      subtitle_style,
+      music_enabled,
+      color_scheme,
     } = body;
 
     // Clean up empty strings to null
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
     console.log("  Name:", name);
     console.log("  Description:", description);
 
-    // Only validate required fields
+    // Walidacja wymaganych pól
     if (
       !user_id ||
       !product_url ||
@@ -58,7 +63,6 @@ export async function POST(req: NextRequest) {
       console.log("✅ Using existing campaign:", campaign_id);
       campaignId = campaign_id;
 
-      // Update video count
       const existingCampaign = await db
         .select()
         .from(campaignsTable)
@@ -72,14 +76,13 @@ export async function POST(req: NextRequest) {
             videos_generated:
               existingCampaign[0].videos_generated + selected_style.length,
             updated_at: new Date(),
-            // Update name/description if provided (not null)
             ...(name && { name }),
             ...(description && { description }),
           })
           .where(eq(campaignsTable.id, campaign_id));
       }
     } else {
-      // Check if campaign exists for this product (if description provided)
+      // Check if campaign exists for this product
       let existingCampaigns = null;
 
       if (description) {
@@ -97,7 +100,6 @@ export async function POST(req: NextRequest) {
       }
 
       if (existingCampaigns && existingCampaigns.length > 0) {
-        // Campaign exists, update video count
         campaignId = existingCampaigns[0].id;
         await db
           .update(campaignsTable)
@@ -115,8 +117,8 @@ export async function POST(req: NextRequest) {
           .insert(campaignsTable)
           .values({
             user_id,
-            name: name || "Untitled Campaign", // Now name is already cleaned or null
-            description: description, // Already cleaned to null if empty
+            name: name || "Untitled Campaign",
+            description: description,
             product_image_url: product_url,
             videos_generated: selected_style.length,
           })
@@ -135,14 +137,19 @@ export async function POST(req: NextRequest) {
       .values({
         user_id,
         campaign_id: campaignId,
-        name: name, // Already cleaned to null if empty
-        description: description, // Already cleaned to null if empty
+        name: name,
+        description: description,
         product_image_url: product_url,
         selected_styles: selected_style,
         language: language || "en",
         status: "processing",
         quality: quality || "720p",
         duration: duration || 10,
+        // Dodanie nowych pól do bazy danych:
+        subtitles_enabled: subtitles_enabled ?? false,
+        subtitle_style: subtitles_enabled ? subtitle_style : null,
+        music_enabled: music_enabled ?? true,
+        color_scheme: subtitles_enabled ? color_scheme : null,
       })
       .returning();
 
@@ -158,16 +165,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("❌ Error in saveAd:", error);
-    console.error("❌ Error details:", JSON.stringify(error, null, 2));
-    console.error(
-      "❌ Error stack:",
-      error instanceof Error ? error.stack : "No stack"
-    );
     return NextResponse.json(
       {
         error: "Failed to save project",
         details: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );

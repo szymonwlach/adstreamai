@@ -9,7 +9,16 @@ import {
   Crown,
   Info,
   X,
-  Plus,
+  Type,
+  Volume2,
+  VolumeX,
+  Heart,
+  TrendingUp,
+  ShoppingBag,
+  Film,
+  Palette,
+  ChevronDown,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,6 +56,19 @@ const GenerateAdContent = () => {
   const [isPrefillingFromCampaign, setIsPrefillingFromCampaign] =
     useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
+
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(true);
+  const [subtitleStyle, setSubtitleStyle] = useState("modern");
+  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
+  const [colorScheme, setColorScheme] = useState("auto");
+
+  // Collapsed sections
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "styles"
+  );
+
   const prevCampaignIdRef = useRef<string | null>(null);
 
   const MAX_IMAGES = 5;
@@ -69,20 +91,35 @@ const GenerateAdContent = () => {
       desc: "Authentic user-generated feel",
       icon: "👤",
       premium: false,
+      category: "organic",
+      previewVideo: "/previews_video/luxury_watch.mp4",
     },
     {
-      id: "trend",
-      name: "Trending",
-      desc: "Based on viral trends",
+      id: "fast-paced",
+      name: "Fast-Paced",
+      desc: "Quick cuts, high energy",
+      icon: "⚡",
+      premium: false,
+      category: "trending",
+      previewVideo: "https://example.com/fast-preview.mp4",
+    },
+    {
+      id: "product-showcase",
+      name: "Product Focus",
+      desc: "Clean product shots",
+      icon: "📦",
+      premium: false,
+      category: "ecommerce",
+      previewVideo: "https://example.com/product-preview.mp4",
+    },
+    {
+      id: "trend-viral",
+      name: "Viral Trend",
+      desc: "Current TikTok/IG trends",
       icon: "🔥",
       premium: true,
-    },
-    {
-      id: "educational",
-      name: "Educational",
-      desc: "Informative & professional",
-      icon: "🎓",
-      premium: true,
+      category: "trending",
+      previewVideo: "https://example.com/viral-preview.mp4",
     },
     {
       id: "testimonial",
@@ -90,7 +127,87 @@ const GenerateAdContent = () => {
       desc: "Customer review style",
       icon: "⭐",
       premium: true,
+      category: "organic",
+      previewVideo: "https://example.com/testimonial-preview.mp4",
     },
+    {
+      id: "before-after",
+      name: "Before/After",
+      desc: "Transformation showcase",
+      icon: "🔄",
+      premium: true,
+      category: "ecommerce",
+      previewVideo: "https://example.com/before-after-preview.mp4",
+    },
+    {
+      id: "educational",
+      name: "Educational",
+      desc: "How-to with clear steps",
+      icon: "🎓",
+      premium: true,
+      category: "organic",
+      previewVideo: "https://example.com/educational-preview.mp4",
+    },
+    {
+      id: "lifestyle",
+      name: "Lifestyle",
+      desc: "Product in real scenarios",
+      icon: "✨",
+      premium: true,
+      category: "ecommerce",
+      previewVideo: "https://example.com/lifestyle-preview.mp4",
+    },
+    {
+      id: "unboxing",
+      name: "Unboxing",
+      desc: "First impression reveal",
+      icon: "🎁",
+      premium: true,
+      category: "trending",
+      previewVideo: "https://example.com/unboxing-preview.mp4",
+    },
+    {
+      id: "comparison",
+      name: "Comparison",
+      desc: "Highlight advantages",
+      icon: "⚖️",
+      premium: true,
+      category: "ecommerce",
+      previewVideo: "https://example.com/comparison-preview.mp4",
+    },
+    {
+      id: "asmr",
+      name: "ASMR/Satisfying",
+      desc: "Satisfying visuals",
+      icon: "🎧",
+      premium: true,
+      category: "trending",
+      previewVideo: "https://example.com/asmr-preview.mp4",
+    },
+    {
+      id: "meme-style",
+      name: "Meme Format",
+      desc: "Humorous, relatable",
+      icon: "😂",
+      premium: true,
+      category: "trending",
+      previewVideo: "https://example.com/meme-preview.mp4",
+    },
+  ];
+
+  const subtitleStyles = [
+    { id: "modern", name: "Modern Bold" },
+    { id: "minimal", name: "Minimal" },
+    { id: "karaoke", name: "Karaoke" },
+    { id: "caption", name: "Caption Box" },
+  ];
+
+  const colorSchemes = [
+    { id: "auto", name: "Auto (AI)" },
+    { id: "vibrant", name: "Vibrant" },
+    { id: "pastel", name: "Pastel" },
+    { id: "dark", name: "Dark Mode" },
+    { id: "neon", name: "Neon" },
   ];
 
   const getPlan = async () => {
@@ -100,9 +217,7 @@ const GenerateAdContent = () => {
       } = await supabase.auth.getSession();
       const response = await fetch("/api/getPlan", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: session?.user.id }),
       });
       const user_plan = await response.json();
@@ -124,46 +239,29 @@ const GenerateAdContent = () => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-
         const response = await fetch(
           `/api/getCampaigns?user_id=${session?.user.id}`
         );
         const data = await response.json();
-
         const campaign = data.campaigns.find((c: any) => c.id === campaignId);
 
         if (campaign) {
-          console.log("🔍 Loading campaign:", campaign);
-          console.log("📸 Product images from DB:", campaign.product_image_url);
-
           setCampaignName(campaign.name);
-
-          // Obsługa product_image_url - może być string, array, lub string z przecinkami
           let images: string[] = [];
           if (campaign.product_image_url) {
             if (Array.isArray(campaign.product_image_url)) {
-              // Już jest tablicą
               images = campaign.product_image_url;
             } else if (typeof campaign.product_image_url === "string") {
-              // Jeśli zawiera przecinki, rozdziel
-              if (campaign.product_image_url.includes(",")) {
-                images = campaign.product_image_url
-                  .split(",")
-                  .map((url: string) => url.trim());
-              } else {
-                // Pojedynczy URL
-                images = [campaign.product_image_url];
-              }
+              images = campaign.product_image_url.includes(",")
+                ? campaign.product_image_url
+                    .split(",")
+                    .map((url: string) => url.trim())
+                : [campaign.product_image_url];
             }
           }
-
-          console.log("✅ Parsed images array:", images);
           setProductImages(images);
           setDescription(campaign.description || "");
-
-          toast.success("Campaign loaded!", {
-            description: `Generating more ads for "${campaign.name}"`,
-          });
+          toast.success("Campaign loaded!");
         }
       } catch (error) {
         console.error("Failed to prefill from campaign:", error);
@@ -187,8 +285,7 @@ const GenerateAdContent = () => {
   const toggleStyle = (styleId: string, isPremium: boolean) => {
     if (isPremium && isFreeUser) {
       toast.warning("Premium Feature", {
-        description:
-          "Upgrade to Premium to unlock all video styles and create diverse content!",
+        description: "Upgrade to unlock all video styles!",
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
@@ -276,6 +373,7 @@ const GenerateAdContent = () => {
     userCredits >= creditsNeeded &&
     creditsNeeded > 0 &&
     productImages.length > 0;
+
   const handleGenerate = async () => {
     const {
       data: { session },
@@ -297,8 +395,6 @@ const GenerateAdContent = () => {
     }
 
     try {
-      console.log("💾 Saving project to database...");
-
       const projectData = {
         user_id: session.user.id,
         name: campaignName.trim() || undefined,
@@ -309,6 +405,11 @@ const GenerateAdContent = () => {
         quality: selectedQuality,
         duration: selectedDuration,
         campaign_id: campaignId || undefined,
+        subtitles_enabled: subtitlesEnabled,
+        subtitle_style: subtitleStyle,
+        music_enabled: musicEnabled,
+        voiceover_enabled: voiceoverEnabled,
+        color_scheme: colorScheme,
       };
 
       const cleanedData = Object.fromEntries(
@@ -331,17 +432,15 @@ const GenerateAdContent = () => {
       const { projectId, campaignId: newCampaignId } =
         await saveResponse.json();
 
-      // 🔥 KLUCZOWA ZMIANA: Najpierw wysyłamy do n8n
-      console.log("📤 Sending to n8n...");
       const n8nResponse = await fetch("/api/sendToN8n", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           project_id: projectId,
           campaign_id: newCampaignId,
-          plan: userPlan,
-          product_name: campaignName.trim() || undefined,
           user_id: session.user.id,
+          plan: userPlan,
+          product_name: campaignName.trim() || "Untitled Campaign",
           description: description.trim() || undefined,
           product_images: productImages,
           selected_styles: selectedStyles,
@@ -350,16 +449,16 @@ const GenerateAdContent = () => {
             "English",
           quality: selectedQuality,
           duration: selectedDuration,
+          subtitles_enabled: subtitlesEnabled,
+          subtitle_style: subtitlesEnabled ? subtitleStyle : null,
+          color_scheme: subtitlesEnabled ? colorScheme : null,
+          music_enabled: musicEnabled,
         }),
       });
 
       const n8nData = await n8nResponse.json();
 
       if (!n8nResponse.ok) {
-        // 🔥 Jeśli n8n zwróci błąd, musimy usunąć zapisany projekt
-        console.error("❌ n8n error, rolling back...");
-
-        // Wywołaj API do usunięcia projektu (musisz stworzyć ten endpoint)
         await fetch("/api/deleteAd", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -372,32 +471,134 @@ const GenerateAdContent = () => {
         throw new Error(n8nData.error || "Failed to send to n8n");
       }
 
-      // ✅ Sukces - wszystko poszło dobrze
-      console.log("✅ Success!");
-
-      if (campaignId) {
-        toast.success("More ads are being generated!", {
-          description: `Creating ${selectedStyles.length} new video${
-            selectedStyles.length > 1 ? "s" : ""
-          } for your campaign.`,
-        });
-      } else {
-        toast.success("Campaign created & ads generating!", {
-          description: `Creating ${selectedStyles.length} video${
-            selectedStyles.length > 1 ? "s" : ""
-          }. Check 'My Campaigns' in a few minutes.`,
-        });
-      }
-
+      toast.success(
+        campaignId ? "More ads are being generated!" : "Campaign created!"
+      );
       router.push("/dashboard/my-ads?refresh=true");
     } catch (error) {
       console.error("❌ Error:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      toast.error("Failed to generate ads", {
-        description: errorMessage,
-      });
+      toast.error("Failed to generate ads", { description: errorMessage });
     }
+  };
+
+  const StyleCard = ({ style }: { style: any }) => {
+    const isSelected = selectedStyles.includes(style.id);
+    const isLocked = style.premium && isFreeUser;
+    const isHovered = hoveredStyle === style.id;
+
+    return (
+      <Card
+        className={`relative overflow-hidden transition-all duration-300 ${
+          isLocked
+            ? "opacity-60 cursor-not-allowed"
+            : `cursor-pointer hover:shadow-lg ${
+                isSelected
+                  ? "ring-2 ring-primary shadow-md"
+                  : "hover:ring-1 hover:ring-primary/50"
+              }`
+        }`}
+        onClick={() => toggleStyle(style.id, style.premium)}
+        onMouseEnter={() => !isLocked && setHoveredStyle(style.id)}
+        onMouseLeave={() => setHoveredStyle(null)}
+      >
+        {/* Preview Video */}
+        <div className="relative aspect-[9/16] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+          {style.previewVideo ? (
+            <>
+              <video
+                src={style.previewVideo}
+                className="absolute inset-0 w-full h-full object-cover"
+                loop
+                muted
+                playsInline
+                autoPlay={isHovered && !isLocked}
+              />
+              {isHovered && !isLocked && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 pointer-events-none"></div>
+              )}
+            </>
+          ) : (
+            <>
+              {isHovered && !isLocked ? (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+                  <div className="text-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto backdrop-blur-sm">
+                      <Play className="w-8 h-8 text-white fill-white" />
+                    </div>
+                    <p className="text-white text-sm font-medium">
+                      Preview Style
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-6xl opacity-20">{style.icon}</span>
+              )}
+            </>
+          )}
+          {isSelected && (
+            <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center z-20">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="p-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{style.icon}</span>
+            <h4 className="font-semibold text-sm">{style.name}</h4>
+            {isLocked && (
+              <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{style.desc}</p>
+        </div>
+      </Card>
+    );
+  };
+
+  const CollapsibleSection = ({
+    id,
+    title,
+    icon,
+    children,
+    badge,
+  }: {
+    id: string;
+    title: string;
+    icon: any;
+    children: React.ReactNode;
+    badge?: string;
+  }) => {
+    const isExpanded = expandedSection === id;
+
+    return (
+      <Card className="overflow-hidden">
+        <button
+          onClick={() => setExpandedSection(isExpanded ? null : id)}
+          className="w-full p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">{icon}</div>
+            <div className="text-left">
+              <h3 className="font-semibold">{title}</h3>
+              {badge && (
+                <p className="text-xs text-muted-foreground mt-0.5">{badge}</p>
+              )}
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-muted-foreground transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </button>
+
+        {isExpanded && <div className="p-5 pt-0 border-t">{children}</div>}
+      </Card>
+    );
   };
 
   if (isPrefillingFromCampaign) {
@@ -417,463 +618,411 @@ const GenerateAdContent = () => {
   return (
     <div className="min-h-screen bg-background">
       <DashboardNavbar />
-      <div className="container mx-auto px-4 py-8 max-w-4xl mt-20">
+      <div className="container mx-auto px-4 py-8 max-w-6xl mt-20">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
             {campaignId ? "Generate More Ads" : "Generate AI Ads"}
           </h1>
           <p className="text-muted-foreground">
-            {campaignId
-              ? "Add more ads to your existing campaign"
-              : "Upload your product photos and let AI create engaging ad content"}
+            Upload product photos, choose styles, and let AI create engaging
+            videos
           </p>
         </div>
 
-        {campaignId && (
-          <Card className="p-4 mb-6 bg-primary/5 border-primary/20">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-primary mt-0.5" />
+        {/* Credits & Summary Bar */}
+        <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <Card className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
               <div>
-                <p className="font-medium text-sm">
-                  Generating for existing campaign
+                <p className="text-sm text-muted-foreground">
+                  Available Credits
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Product info is pre-filled. Just select video styles and
-                  settings.
-                </p>
+                <p className="text-2xl font-bold">{userCredits}</p>
               </div>
             </div>
           </Card>
-        )}
 
-        <Card className="p-6">
-          <div className="space-y-6">
-            {/* Credits Display */}
-            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Available Credits</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {userCredits}
-                  </p>
-                </div>
+          <Card className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-green-500/10">
+                <Wand2 className="w-6 h-6 text-green-600" />
               </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Will Use</p>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Videos to Generate
+                </p>
                 <p className="text-2xl font-bold">{creditsNeeded}</p>
               </div>
             </div>
+          </Card>
+        </div>
 
-            {/* Campaign Name */}
-            <div>
-              <Label htmlFor="campaign-name" className="text-base mb-3 block">
-                Campaign Name
-                <span className="text-muted-foreground font-normal ml-2">
-                  (optional)
-                </span>
-              </Label>
-              {campaignId && campaignName && (
-                <p className="text-sm text-muted-foreground mb-3">
-                  ✓ Using name from campaign. Edit if needed.
-                </p>
-              )}
-              <Input
-                id="campaign-name"
-                value={campaignName}
-                onChange={(e) => setCampaignName(e.target.value)}
-                placeholder="e.g., Summer Sale 2024, New Product Launch"
-                className="text-base"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Leave empty and AI will generate a creative campaign name
-                  based on your product images
-                </span>
-              </p>
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <Label className="text-base mb-3 block">
-                Product Photos * (up to {MAX_IMAGES})
-              </Label>
-              {campaignId && productImages.length > 0 && (
-                <p className="text-sm text-muted-foreground mb-3">
-                  ✓ Using {productImages.length} image
-                  {productImages.length > 1 ? "s" : ""} from campaign. Upload
-                  more or remove existing ones.
-                </p>
-              )}
-
-              <div className="grid grid-cols-3 gap-3">
-                {productImages.map((image, index) => (
-                  <div key={index} className="relative group aspect-square">
-                    <img
-                      src={image}
-                      alt={`Product ${index + 1}`}
-                      className="w-full h-full object-cover rounded-lg border-2 border-border"
-                    />
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-
-                {productImages.length < MAX_IMAGES && (
-                  <label
-                    htmlFor="image-upload"
-                    className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary transition-all flex flex-col items-center justify-center bg-muted/50 hover:bg-muted cursor-pointer group"
+        <div className="space-y-4">
+          {/* Product Images - Always Visible */}
+          <Card className="p-6">
+            <Label className="text-lg mb-4 block">Product Photos *</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {productImages.map((image, index) => (
+                <div key={index} className="relative group aspect-square">
+                  <img
+                    src={image}
+                    alt={`Product ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border-2"
+                  />
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 bg-destructive text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                   >
-                    {isUploading ? (
-                      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-                    ) : (
-                      <>
-                        <Upload className="w-8 h-8 text-muted-foreground group-hover:text-primary mb-2 transition-colors" />
-                        <p className="text-xs font-medium text-center px-2">
-                          {productImages.length === 0
-                            ? "Upload photos"
-                            : "Add more"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground text-center px-2 mt-1">
-                          PNG, JPG • Multiple
-                        </p>
-                      </>
-                    )}
-                    <input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={isUploading}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
 
-            {/* Description */}
-            <div>
-              <Label htmlFor="description" className="text-base mb-3 block">
-                Product Description
-                <span className="text-muted-foreground font-normal ml-2">
-                  (optional)
-                </span>
-              </Label>
-              {campaignId && description && (
-                <p className="text-sm text-muted-foreground mb-3">
-                  ✓ Using description from campaign. Edit if needed.
-                </p>
+              {productImages.length < MAX_IMAGES && (
+                <label className="aspect-square rounded-lg border-2 border-dashed hover:border-primary transition-all flex flex-col items-center justify-center bg-muted/30 hover:bg-muted cursor-pointer">
+                  {isUploading ? (
+                    <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                      <p className="text-xs text-center">Upload</p>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                </label>
               )}
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe your product features, benefits, and target audience..."
-                className="min-h-32 resize-none"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                <span className="inline-flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Leave empty and AI will analyze your product images to create
-                  a compelling description and ad copy
-                </span>
-              </p>
+            </div>
+          </Card>
+
+          {/* Video Styles - Always Visible & Prominent */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Label className="text-lg">Choose Video Styles *</Label>
+              <span className="text-sm text-muted-foreground">
+                {selectedStyles.length} selected
+              </span>
             </div>
 
-            {/* Language Selection */}
-            <div>
-              <Label
-                htmlFor="language"
-                className="text-base mb-3 flex items-center gap-2"
-              >
-                <Globe className="w-4 h-4" />
-                Ad Language
-              </Label>
-              <Select
-                value={selectedLanguage}
-                onValueChange={setSelectedLanguage}
-              >
-                <SelectTrigger id="language" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {languages.map((lang) => (
-                    <SelectItem key={lang.code} value={lang.code}>
-                      {lang.flag} {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {videoStyles.map((style) => (
+                <StyleCard key={style.id} style={style} />
+              ))}
             </div>
+          </Card>
 
-            {/* Video Quality & Duration */}
+          {/* Collapsible Sections */}
+          <CollapsibleSection
+            id="basic"
+            title="Basic Info"
+            icon={<Info className="w-5 h-5 text-primary" />}
+            badge="Optional - AI can auto-generate"
+          >
             <div className="space-y-4">
               <div>
-                <Label className="text-base mb-3 block">Video Quality</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Card
-                    className={`p-4 cursor-pointer transition-all hover:border-primary ${
-                      selectedQuality === "720p"
-                        ? "border-primary bg-primary/5"
-                        : "border-border"
-                    }`}
-                    onClick={() => {
-                      setSelectedQuality("720p");
-                      setSelectedDuration(10);
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedQuality === "720p"}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold">720p HD</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Standard quality
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card
-                    className={`p-4 transition-all ${
-                      canUse1080p
-                        ? `cursor-pointer hover:border-primary ${
-                            selectedQuality === "1080p"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                          }`
-                        : "opacity-50 cursor-not-allowed border-border bg-muted/50"
-                    }`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (canUse1080p) {
-                        setSelectedQuality("1080p");
-                      } else {
-                        toast.warning("Premium Feature", {
-                          description: "Upgrade to Premium for 1080p!",
-                          icon: <Crown className="w-5 h-5 text-amber-500" />,
-                          action: {
-                            label: "Upgrade",
-                            onClick: () => router.push("/dashboard/pricing"),
-                          },
-                        });
-                      }
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedQuality === "1080p" && canUse1080p}
-                        disabled={!canUse1080p}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">1080p Full HD</h3>
-                          {!canUse1080p && (
-                            <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
-                              PREMIUM
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          High quality
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
+                <Label className="mb-2 block text-sm">Campaign Name</Label>
+                <Input
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="e.g., Summer Sale 2024"
+                />
               </div>
-
               <div>
-                <Label className="text-base mb-3 block">Video Duration</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <Card
-                    className={`p-4 cursor-pointer transition-all hover:border-primary ${
-                      selectedDuration === 10
-                        ? "border-primary bg-primary/5"
-                        : "border-border"
-                    }`}
-                    onClick={() => setSelectedDuration(10)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedDuration === 10}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold">10 seconds</h3>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Quick & engaging
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
+                <Label className="mb-2 block text-sm">Description</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your product..."
+                  className="resize-none h-24"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
 
-                  <Card
-                    className={`p-4 transition-all ${
-                      canUse15sec
-                        ? `cursor-pointer hover:border-primary ${
-                            selectedDuration === 15
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                          }`
-                        : "opacity-50 cursor-not-allowed border-border bg-muted/50"
-                    }`}
-                    onClick={() => {
-                      if (canUse15sec) {
-                        setSelectedDuration(15);
-                      } else {
-                        toast.warning("Premium Feature", {
-                          description: isFreeUser
-                            ? "Upgrade for 15-second videos!"
-                            : "Select 1080p to unlock 15s",
-                        });
-                      }
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <Checkbox
-                        checked={selectedDuration === 15}
-                        disabled={!canUse15sec}
-                        className="mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">15 seconds</h3>
-                          {!canUse15sec && (
-                            <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
-                              PREMIUM
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          More storytelling
-                        </p>
-                      </div>
+          <CollapsibleSection
+            id="video"
+            title="Video Settings"
+            icon={<Film className="w-5 h-5 text-primary" />}
+            badge={`${selectedQuality} • ${selectedDuration}s`}
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Card
+                  className={`p-4 cursor-pointer ${
+                    selectedQuality === "720p" ? "ring-2 ring-primary" : ""
+                  }`}
+                  onClick={() => setSelectedQuality("720p")}
+                >
+                  <p className="font-medium">720p HD</p>
+                  <p className="text-xs text-muted-foreground">Standard</p>
+                </Card>
+                <Card
+                  className={`p-4 ${
+                    canUse1080p
+                      ? `cursor-pointer ${
+                          selectedQuality === "1080p"
+                            ? "ring-2 ring-primary"
+                            : ""
+                        }`
+                      : "opacity-50 cursor-not-allowed"
+                  }`}
+                  onClick={() => canUse1080p && setSelectedQuality("1080p")}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">1080p</p>
+                    {!canUse1080p && (
+                      <Crown className="w-3 h-3 text-amber-500" />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">High quality</p>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Card
+                  className={`p-4 cursor-pointer ${
+                    selectedDuration === 10 ? "ring-2 ring-primary" : ""
+                  }`}
+                  onClick={() => setSelectedDuration(10)}
+                >
+                  <p className="font-medium">10 seconds</p>
+                </Card>
+                <Card
+                  className={`p-4 ${
+                    canUse15sec
+                      ? `cursor-pointer ${
+                          selectedDuration === 15 ? "ring-2 ring-primary" : ""
+                        }`
+                      : "opacity-50 cursor-not-allowed"
+                  }`}
+                  onClick={() => canUse15sec && setSelectedDuration(15)}
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium">15 seconds</p>
+                    {!canUse15sec && (
+                      <Crown className="w-3 h-3 text-amber-500" />
+                    )}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="style"
+            title="Style & Audio"
+            icon={<Palette className="w-5 h-5 text-primary" />}
+            badge={`${subtitlesEnabled ? "Subtitles" : "No subs"}${
+              musicEnabled ? " • Music" : ""
+            }`}
+          >
+            <div className="space-y-4">
+              {/* Main Subtitles Toggle Card */}
+              <Card
+                className={`p-4 cursor-pointer transition-all duration-200 ${
+                  subtitlesEnabled
+                    ? "ring-2 ring-primary bg-primary/5"
+                    : "hover:bg-accent/50"
+                }`}
+                onClick={() => setSubtitlesEnabled(!subtitlesEnabled)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${
+                        subtitlesEnabled
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <Type className="w-5 h-5" />
                     </div>
-                  </Card>
+                    <div>
+                      <p className="font-semibold text-sm">Subtitles</p>
+                      <p className="text-xs text-muted-foreground">
+                        {subtitlesEnabled
+                          ? "Style settings are active"
+                          : "Enable burned-in captions for your video"}
+                      </p>
+                    </div>
+                  </div>
+                  <Checkbox
+                    checked={subtitlesEnabled}
+                    onCheckedChange={(c) => setSubtitlesEnabled(c as boolean)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+
+                {/* Expanded options - only visible when subtitlesEnabled is true */}
+                {subtitlesEnabled && (
+                  <div
+                    className="mt-4 pt-4 border-t grid grid-cols-2 gap-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase font-bold text-muted-foreground">
+                        Subtitle Style
+                      </Label>
+                      <Select
+                        value={subtitleStyle}
+                        onValueChange={setSubtitleStyle}
+                      >
+                        <SelectTrigger className="w-full bg-background h-9 text-sm">
+                          <SelectValue placeholder="Select style" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subtitleStyles.map((style) => (
+                            <SelectItem key={style.id} value={style.id}>
+                              {style.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] uppercase font-bold text-muted-foreground">
+                        Color Palette
+                      </Label>
+                      <Select
+                        value={colorScheme}
+                        onValueChange={setColorScheme}
+                      >
+                        <SelectTrigger className="w-full bg-background h-9 text-sm">
+                          <SelectValue placeholder="Select colors" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {colorSchemes.map((scheme) => (
+                            <SelectItem key={scheme.id} value={scheme.id}>
+                              {scheme.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Music Card */}
+                <Card
+                  className={`p-4 cursor-pointer transition-colors ${
+                    musicEnabled ? "ring-1 ring-primary" : "hover:bg-accent/50"
+                  }`}
+                  onClick={() => setMusicEnabled(!musicEnabled)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {musicEnabled ? (
+                        <Volume2 className="w-4 h-4 text-primary" />
+                      ) : (
+                        <VolumeX className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      <p className="font-medium text-sm">Background Music</p>
+                    </div>
+                    <Checkbox
+                      checked={musicEnabled}
+                      onCheckedChange={(c) => setMusicEnabled(c as boolean)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </Card>
+
+                {/* Language Selector */}
+                <div className="flex flex-col">
+                  <Select
+                    value={selectedLanguage}
+                    onValueChange={setSelectedLanguage}
+                  >
+                    <SelectTrigger className="w-full h-full min-h-[52px] bg-card border shadow-sm">
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                          Video Language
+                        </span>
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {languages.map((lang) => (
+                        <SelectItem key={lang.code} value={lang.code}>
+                          {lang.flag} {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
+          </CollapsibleSection>
+        </div>
 
-            {/* Video Styles */}
+        {/* Generate Button - Always Visible at Bottom */}
+        <Card className="p-6 mt-6  bottom-4 shadow-lg border-2">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <Label className="text-base mb-4 block">
-                Select Video Styles *
-              </Label>
-              <p className="text-sm text-muted-foreground mb-4">
-                Choose one or more styles (1 credit per style). Each style
-                creates a separate video.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                {videoStyles.map((style) => {
-                  const isSelected = selectedStyles.includes(style.id);
-                  const isLocked = style.premium && isFreeUser;
-
-                  return (
-                    <Card
-                      key={style.id}
-                      className={`p-4 transition-all ${
-                        isLocked
-                          ? "opacity-50 cursor-not-allowed"
-                          : `cursor-pointer hover:border-primary ${
-                              isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-border"
-                            }`
-                      }`}
-                      onClick={() => toggleStyle(style.id, style.premium)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={isSelected && !isLocked}
-                          disabled={isLocked}
-                          className="mt-1"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xl">{style.icon}</span>
-                            <h3 className="font-semibold">{style.name}</h3>
-                            {isLocked && (
-                              <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full font-medium">
-                                PREMIUM
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {style.desc}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="bg-muted/50 rounded-lg p-4 border border-border">
+              <p className="font-semibold text-lg">Ready to Generate</p>
               <p className="text-sm text-muted-foreground">
-                {selectedStyles.length === 0 ? (
-                  "Select at least one video style to continue"
-                ) : (
+                {selectedStyles.length > 0 ? (
                   <>
-                    <span className="text-primary font-medium">
-                      {selectedStyles.length} video
-                      {selectedStyles.length !== 1 ? "s" : ""} will be generated
-                    </span>
-                    {productImages.length > 1 && (
-                      <span> from {productImages.length} images</span>
-                    )}
-                    {" • "}
-                    <span
-                      className={
-                        creditsNeeded > userCredits
-                          ? "text-destructive"
-                          : "text-foreground"
-                      }
-                    >
-                      {creditsNeeded} credit{creditsNeeded !== 1 ? "s" : ""}{" "}
-                      will be used
-                    </span>
-                    {creditsNeeded > userCredits && (
-                      <span className="block mt-2 text-destructive">
-                        ⚠️ Insufficient credits
-                      </span>
-                    )}
+                    Creating {selectedStyles.length} video
+                    {selectedStyles.length !== 1 ? "s" : ""} • {selectedQuality}{" "}
+                    • {selectedDuration}s
                   </>
+                ) : (
+                  "Select at least one video style to continue"
                 )}
               </p>
             </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/dashboard/my-ads")}
-                className="flex-1"
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Credits</p>
+              <p
+                className={`text-2xl font-bold ${
+                  creditsNeeded > userCredits
+                    ? "text-destructive"
+                    : "text-primary"
+                }`}
               >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleGenerate}
-                className="flex-1 gap-2"
-                disabled={productImages.length === 0 || !canGenerate}
-              >
-                <Wand2 className="w-4 h-4" />
-                Generate {creditsNeeded} Video{creditsNeeded !== 1 ? "s" : ""} (
-                {creditsNeeded} {creditsNeeded === 1 ? "credit" : "credits"})
-              </Button>
+                {creditsNeeded} / {userCredits}
+              </p>
             </div>
           </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/dashboard/my-ads")}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              className="flex-1 gap-2"
+              disabled={!canGenerate || productImages.length === 0}
+              size="lg"
+            >
+              <Wand2 className="w-5 h-5" />
+              Generate {creditsNeeded > 0 ? creditsNeeded : ""} Video
+              {creditsNeeded !== 1 ? "s" : ""}
+            </Button>
+          </div>
+
+          {creditsNeeded > userCredits && (
+            <p className="text-sm text-destructive text-center mt-3">
+              ⚠️ Insufficient credits - you need {creditsNeeded - userCredits}{" "}
+              more
+            </p>
+          )}
         </Card>
       </div>
     </div>
