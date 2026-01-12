@@ -397,14 +397,14 @@ const GenerateAdContent = () => {
     try {
       const projectData = {
         user_id: session.user.id,
-        name: campaignName.trim() || undefined,
-        description: description.trim() || undefined,
         product_url: productImages,
-        selected_style: selectedStyles,
+        selected_style: selectedStyles, // Backend chce selected_style (bez s)
+        name: campaignName.trim() || null,
+        description: description.trim() || null,
         language: selectedLanguage,
         quality: selectedQuality,
         duration: selectedDuration,
-        campaign_id: campaignId || undefined,
+        campaign_id: campaignId && campaignId.trim() !== "" ? campaignId : null,
         subtitles_enabled: subtitlesEnabled,
         subtitle_style: subtitleStyle,
         music_enabled: musicEnabled,
@@ -412,16 +412,17 @@ const GenerateAdContent = () => {
         color_scheme: colorScheme,
       };
 
-      const cleanedData = Object.fromEntries(
-        Object.entries(projectData).filter(([_, v]) => v !== undefined)
-      );
+      console.log("=== DEBUG ===");
+      console.log("user_id:", projectData.user_id);
+      console.log("product_url:", projectData.product_url);
+      console.log("selected_style:", projectData.selected_style);
+      console.log("Cały obiekt:", JSON.stringify(projectData, null, 2));
 
       const saveResponse = await fetch("/api/saveAd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(cleanedData),
+        body: JSON.stringify(projectData), // Wyślij projectData, NIE cleanedData!
       });
-
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json();
         throw new Error(

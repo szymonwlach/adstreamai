@@ -28,9 +28,17 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
 ]);
 export const videoStyleEnum = pgEnum("video_style", [
   "ugc",
-  "trend",
-  "educational",
+  "fast_paced",
+  "product_showcase",
+  "trend_viral",
   "testimonial",
+  "before_after",
+  "educational",
+  "lifestyle",
+  "unboxing",
+  "comparison",
+  "asmr",
+  "meme_style",
 ]);
 export const platformEnum = pgEnum("platform", [
   "tiktok",

@@ -891,26 +891,27 @@ const AdTransformationShowcase = () => {
 
   const currentDemo = demos[currentIndex];
 
+  // Efekt obsługujący zatrzymywanie wideo i dźwięku przy scrollowaniu
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && videoRef.current) {
-            setTimeout(() => {
-              videoRef.current?.play()?.catch((err) => {
-                const playOnInteraction = () => {
-                  videoRef.current?.play();
-                  document.removeEventListener("click", playOnInteraction);
-                };
-                document.addEventListener("click", playOnInteraction, {
-                  once: true,
-                });
-              });
-            }, 100);
+          if (entry.isIntersecting) {
+            // Gdy sekcja wraca na ekran, próbujemy odpalić wideo
+            videoRef.current?.play().catch(() => {
+              // Blokada autoplay przez przeglądarkę - ignorujemy
+            });
+          } else {
+            // KLUCZOWE: Gdy użytkownik zeskroluje poza sekcję
+            if (videoRef.current) {
+              videoRef.current.pause(); // Stop wideo
+              videoRef.current.muted = true; // Wyciszenie na poziomie elementu
+              setIsMuted(true); // Aktualizacja stanu UI (ikona głośnika)
+            }
           }
         });
       },
-      { threshold: 0.3 }
+      { threshold: 0.2 } // Reaguje, gdy mniej niż 20% sekcji jest widoczne
     );
 
     if (sectionRef.current) {
@@ -922,16 +923,20 @@ const AdTransformationShowcase = () => {
         observer.unobserve(sectionRef.current);
       }
     };
-  }, [currentIndex]);
+  }, [currentIndex]); // Re-inicjalizacja przy zmianie slajdu, by śledzić nowe wideo
 
+  // Resetowanie wideo przy ręcznej zmianie slajdu
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.load();
       setIsMuted(true);
+      videoRef.current.muted = true;
+
+      // Mały timeout, żeby wideo zdążyło się załadować przed play
       setTimeout(() => {
         videoRef.current
           ?.play()
-          ?.catch((err) => console.log("Play prevented:", err));
+          .catch((err) => console.log("Play prevented:", err));
       }, 50);
     }
   }, [currentIndex]);
@@ -983,7 +988,7 @@ const AdTransformationShowcase = () => {
 
         {/* Main Showcase */}
         <div className="max-w-7xl mx-auto">
-          {/* Category Selector - Clickable tabs */}
+          {/* Category Selector */}
           <div className="flex justify-center gap-3 mb-8">
             {demos.map((demo) => (
               <button
@@ -1074,10 +1079,8 @@ const AdTransformationShowcase = () => {
                             type="video/mp4"
                           />
                         </video>
-                        {/* Gradient overlay */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
 
-                        {/* Unmute button */}
                         <button
                           onClick={toggleMute}
                           className="absolute bottom-6 right-6 p-4 rounded-full bg-white/90 backdrop-blur-sm shadow-2xl hover:bg-white transition-all hover:scale-110 group/btn"
