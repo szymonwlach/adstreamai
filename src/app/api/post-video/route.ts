@@ -65,8 +65,6 @@ export async function POST(request: NextRequest) {
     const video: VideoData = {
       id: videoData.id,
       video_url: videoData.video_url,
-      caption: videoData.caption,
-      hashtags: videoData.hashtags,
       style: videoData.style,
       project_id: videoData.project_id,
       user_id: videoData.user_id,
