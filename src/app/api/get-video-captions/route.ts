@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Pobierz video z bazy wraz z AI-generated captions
+    // Pobieramy rekord z bazy
     const [video] = await db
       .select()
       .from(videosTable)
@@ -27,47 +27,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Video not found" }, { status: 404 });
     }
 
-    // Parsuj ai_captions z JSONB
-    const aiCaptions = (video.ai_captions as any) || {};
+    // Parsujemy ai_captions. Jeśli pole w bazie jest puste, używamy pustego obiektu.
+    // video.ai_captions odpowiada strukturze JSON, którą podałeś.
+    const ai = (video.ai_captions as any) || {};
 
-    // Przygotuj captiony dla różnych platform z ai_captions
+    // Mapujemy strukturę z bazy na ujednolicony format dla frontendu
     const captions = {
       instagram: {
-        text: aiCaptions.instagram?.text || video.caption || "",
-        hashtags:
-          aiCaptions.instagram?.hashtags ||
-          (Array.isArray(video.hashtags)
-            ? video.hashtags.join(" ")
-            : video.hashtags || ""),
+        text: ai.instagram?.text || "",
+        hashtags: ai.instagram?.hashtags || "",
       },
       facebook: {
-        title: aiCaptions.facebook?.title || video.caption || "",
-        text: aiCaptions.facebook?.text || video.caption || "",
+        title: ai.facebook?.title || "",
+        text: ai.facebook?.text || "",
       },
       youtube: {
-        title: aiCaptions.youtube?.title || video.caption || "",
-        description: aiCaptions.youtube?.description || video.caption || "",
+        // Mapujemy z youtube_shorts zgodnie z Twoim formatem
+        title: ai.youtube_shorts?.title || "",
+        description: ai.youtube_shorts?.description || "",
       },
       tiktok: {
-        text: aiCaptions.tiktok?.text || video.caption || "",
+        text: ai.tiktok?.text || "",
       },
       linkedin: {
-        title: aiCaptions.facebook?.title || video.caption || "", // Użyj Facebook jako fallback
-        text: aiCaptions.facebook?.text || video.caption || "",
+        title: ai.linkedin?.title || "",
+        text: ai.linkedin?.text || "",
+      },
+      x: {
+        text: ai.x?.text || "",
       },
     };
 
     console.log("📋 Loaded AI captions for video:", videoId);
-    console.log("🎯 Available platforms:", Object.keys(aiCaptions));
 
     return NextResponse.json({
       success: true,
       captions,
       video: {
         id: video.id,
-        caption: video.caption,
-        hashtags: video.hashtags,
-        ai_captions: aiCaptions,
+        ai_captions: ai,
       },
     });
   } catch (error: any) {
