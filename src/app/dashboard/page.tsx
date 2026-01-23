@@ -38,19 +38,20 @@ const Dashboard = () => {
       available: true,
     },
     {
-      id: "instagram",
-      name: "Instagram",
-      icon: "📸",
-      color: "bg-purple-500",
-      available: false,
-    },
-    {
       id: "tiktok",
       name: "TikTok",
       icon: "🎵",
       color: "bg-pink-500",
       available: true,
     },
+    {
+      id: "instagram",
+      name: "Instagram",
+      icon: "📸",
+      color: "bg-purple-500",
+      available: false,
+    },
+
     {
       id: "facebook",
       name: "Facebook",
@@ -584,21 +585,31 @@ const Dashboard = () => {
             </Button>
           </Card>
 
-          <Card
-            className="p-6 bg-card border-border hover:border-primary/50 transition-all cursor-pointer group shadow-md hover:shadow-lg"
-            onClick={() => router.push("/dashboard/analytics")}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 bg-muted rounded-xl group-hover:bg-primary/10 transition-colors">
-                <TrendingUp className="w-8 h-8 text-foreground group-hover:text-primary transition-colors" />
+          <Card className="relative p-6 bg-card border-border transition-all shadow-md opacity-60">
+            {/* Coming Soon Overlay */}
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm rounded-lg flex items-center justify-center z-10">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground mb-2">
+                  Coming Soon
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  This feature is under development
+                </p>
               </div>
-              <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+
+            {/* Original Content (blurred in background) */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="p-3 bg-muted rounded-xl">
+                <TrendingUp className="w-8 h-8 text-foreground" />
+              </div>
+              <ExternalLink className="w-5 h-5 text-muted-foreground" />
             </div>
             <h3 className="text-2xl font-bold mb-2">Analytics</h3>
             <p className="text-muted-foreground mb-4">
               Track performance and engagement across all platforms
             </p>
-            <Button variant="outline" className="w-full" size="lg">
+            <Button variant="outline" className="w-full" size="lg" disabled>
               View Analytics
             </Button>
           </Card>
@@ -676,11 +687,9 @@ const Dashboard = () => {
           {!loading && connectedPlatforms.length === 0 && (
             <Card className="p-10 mb-6 bg-muted/30 border-2 border-dashed border-border text-center">
               <Link2 className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">
-                Connect Your YouTube Account
-              </h3>
+              <h3 className="text-2xl font-bold mb-2">Connect Your Accounts</h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Connect your YouTube account to start posting AI-generated
+                Connect your social media accounts to start posting AI-generated
                 Shorts automatically. More platforms coming soon!
               </p>
             </Card>
@@ -727,9 +736,10 @@ const Dashboard = () => {
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base">{platform.name}</h3>
                         {platform.id === "youtube_shorts" && isAvailable && (
-                          <Badge variant="default" className="text-xs">
-                            Active
-                          </Badge>
+                          // <Badge variant="default" className="text-xs">
+                          //   Active
+                          // </Badge>
+                          <></>
                         )}
                         {!isAvailable && (
                           <Badge variant="outline" className="text-xs">

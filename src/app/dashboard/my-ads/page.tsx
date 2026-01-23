@@ -341,12 +341,12 @@ const MyContent = () => {
     // First auto-refresh after 10 seconds
     const initialRefreshTimeout = setTimeout(() => {
       fetchCampaigns(false);
-    }, 10000); // 10 seconds
+    }, 12500); // 12.5 seconds
 
-    // Then auto-refresh every minute
+    // Then auto-refresh every 30 sec
     const autoRefreshInterval = setInterval(() => {
       fetchCampaigns(false);
-    }, 60000); // 1 minute = 60000ms
+    }, 30000); // 30 sec = 30000ms
 
     return () => {
       clearTimeout(initialRefreshTimeout);
@@ -470,7 +470,7 @@ const MyContent = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 mt-[50px]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 mt-[65px]">
       <DashboardNavbar />
 
       {/* Manual Refresh Button - Fixed Position */}

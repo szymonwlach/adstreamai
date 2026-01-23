@@ -14,12 +14,7 @@ import {
 // ENUMS
 // ============================================
 
-export const planEnum = pgEnum("plan", [
-  "free",
-  "starter",
-  "pro",
-  "enterprise",
-]);
+export const planEnum = pgEnum("plan", ["free", "starter", "pro", "scale"]);
 export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "active",
   "past_due",
@@ -27,18 +22,30 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "trialing",
 ]);
 export const videoStyleEnum = pgEnum("video_style", [
-  "ugc",
-  "fast_paced",
-  "product_showcase",
-  "trend_viral",
-  "testimonial",
-  "before_after",
-  "educational",
-  "lifestyle",
-  "unboxing",
-  "comparison",
-  "asmr",
-  "meme_style",
+  // "ugc",
+  // "fast_paced",
+  // "product_showcase",
+  // "trend_viral",
+  // "testimonial",
+  // "before_after",
+  // "educational",
+  // "lifestyle",
+  // "unboxing",
+  // "comparison",
+  // "asmr",
+  // "meme_style",
+  "ugc", // Autentyczność, styl nagrania telefonem
+  "trend", // Dynamiczne cięcia, zoomy, wysoka energia
+  "cinematic_luxury", // Elegancja, slow-motion, oświetlenie premium
+  "product_showcase", // Skupienie na detalu i jakości produktu
+  "stop_motion", // Kreatywny, skaczący ruch, styl animacji
+  "before_after", // Transformacja, pokazanie efektu "przed i po"
+  "educational", // Wiedza, napisy, przejrzyste wyjaśnienia
+  "lifestyle", // Produkt w naturalnym, codziennym użyciu
+  "unboxing", // Emocja odkrywania i otwierania produktu
+  "asmr", // Zbliżenia macro, tekstury, bodźce wizualne
+  "cyber_glitch", // Futurystyczny vibe, neony, technologia
+  "surreal_abstract", // Magia, lewitacja, niemożliwa fizyka (Sora 2 Power)
 ]);
 export const platformEnum = pgEnum("platform", [
   "tiktok",

@@ -36,6 +36,55 @@ import {
 import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+const CollapsibleSection = ({
+  id,
+  title,
+  icon,
+  children,
+  badge,
+  expandedSection,
+  setExpandedSection,
+}: {
+  id: string;
+  title: string;
+  icon: any;
+  children: React.ReactNode;
+  badge?: string;
+  expandedSection: string | null;
+  setExpandedSection: (id: string | null) => void;
+}) => {
+  const isExpanded = expandedSection === id;
+
+  return (
+    <Card
+      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+      onClick={() => setExpandedSection(isExpanded ? null : id)}
+    >
+      <div className="w-full p-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">{icon}</div>
+          <div className="text-left">
+            <h3 className="font-semibold">{title}</h3>
+            {badge && (
+              <p className="text-xs text-muted-foreground mt-0.5">{badge}</p>
+            )}
+          </div>
+        </div>
+        <ChevronDown
+          className={`w-5 h-5 text-muted-foreground transition-transform ${
+            isExpanded ? "rotate-180" : ""
+          }`}
+        />
+      </div>
+
+      {isExpanded && (
+        <div className="p-5 pt-0 border-t" onClick={(e) => e.stopPropagation()}>
+          {children}
+        </div>
+      )}
+    </Card>
+  );
+};
 
 const GenerateAdContent = () => {
   const router = useRouter();
@@ -58,9 +107,9 @@ const GenerateAdContent = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
 
-  const [subtitlesEnabled, setSubtitlesEnabled] = useState(true);
+  const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
   const [subtitleStyle, setSubtitleStyle] = useState("modern");
-  const [musicEnabled, setMusicEnabled] = useState(true);
+  const [musicEnabled, setMusicEnabled] = useState(false);
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
   const [colorScheme, setColorScheme] = useState("auto");
 
@@ -88,110 +137,110 @@ const GenerateAdContent = () => {
     {
       id: "ugc",
       name: "UGC Style",
-      desc: "Authentic user-generated feel",
+      desc: "Authentic, relatable creator feel",
       icon: "👤",
       premium: false,
       category: "organic",
-      previewVideo: "/previews_video/luxury_watch.mp4",
+      previewVideo: "/previews_video/ugc.mp4",
     },
     {
-      id: "fast-paced",
-      name: "Fast-Paced",
-      desc: "Quick cuts, high energy",
+      id: "trend",
+      name: "Trend",
+      desc: "Quick cuts, high energy & beats",
       icon: "⚡",
       premium: false,
       category: "trending",
-      previewVideo: "https://example.com/fast-preview.mp4",
+      previewVideo: "/previews_video/trend.mp4",
     },
     {
-      id: "product-showcase",
-      name: "Product Focus",
-      desc: "Clean product shots",
+      id: "cinematic_luxury",
+      name: "Cinematic Luxury",
+      desc: "Slow motion, premium lighting",
+      icon: "💎",
+      premium: false,
+      category: "premium",
+      previewVideo: "/previews_video/luxury_watch.mp4",
+    },
+    {
+      id: "product_showcase",
+      name: "Studio Focus",
+      desc: "Clean, professional product shots",
       icon: "📦",
       premium: false,
       category: "ecommerce",
-      previewVideo: "https://example.com/product-preview.mp4",
+      previewVideo: "/previews_video/product_showcase.mp4",
     },
     {
-      id: "trend-viral",
-      name: "Viral Trend",
-      desc: "Current TikTok/IG trends",
-      icon: "🔥",
-      premium: true,
-      category: "trending",
-      previewVideo: "https://example.com/viral-preview.mp4",
+      id: "stop_motion",
+      name: "Stop-Motion",
+      desc: "Playful, frame-by-frame animation",
+      icon: "🧱",
+      premium: false,
+      category: "creative",
+      previewVideo: "/previews_video/stop_motion.mp4",
     },
     {
-      id: "testimonial",
-      name: "Testimonial",
-      desc: "Customer review style",
-      icon: "⭐",
-      premium: true,
-      category: "organic",
-      previewVideo: "https://example.com/testimonial-preview.mp4",
-    },
-    {
-      id: "before-after",
+      id: "before_after",
       name: "Before/After",
-      desc: "Transformation showcase",
+      desc: "Proven result transformation",
       icon: "🔄",
-      premium: true,
+      premium: false,
       category: "ecommerce",
-      previewVideo: "https://example.com/before-after-preview.mp4",
+      previewVideo: "/previews_video/before_after.mp4",
     },
     {
       id: "educational",
       name: "Educational",
-      desc: "How-to with clear steps",
+      desc: "Clear steps and key features",
       icon: "🎓",
-      premium: true,
+      premium: false,
       category: "organic",
-      previewVideo: "https://example.com/educational-preview.mp4",
+      previewVideo: "/previews_video/educational.mp4",
     },
     {
       id: "lifestyle",
       name: "Lifestyle",
-      desc: "Product in real scenarios",
+      desc: "Product in real-world scenarios",
       icon: "✨",
-      premium: true,
+      premium: false,
       category: "ecommerce",
-      previewVideo: "https://example.com/lifestyle-preview.mp4",
+      previewVideo: "/previews_video/lifestyle.mp4",
     },
     {
       id: "unboxing",
       name: "Unboxing",
-      desc: "First impression reveal",
+      desc: "First impression & reveal experience",
       icon: "🎁",
-      premium: true,
+      premium: false,
       category: "trending",
-      previewVideo: "https://example.com/unboxing-preview.mp4",
-    },
-    {
-      id: "comparison",
-      name: "Comparison",
-      desc: "Highlight advantages",
-      icon: "⚖️",
-      premium: true,
-      category: "ecommerce",
-      previewVideo: "https://example.com/comparison-preview.mp4",
+      previewVideo: "/previews_video/unboxing.mp4",
     },
     {
       id: "asmr",
       name: "ASMR/Satisfying",
-      desc: "Satisfying visuals",
+      desc: "Focus on textures and close-ups",
       icon: "🎧",
       premium: true,
       category: "trending",
-      previewVideo: "https://example.com/asmr-preview.mp4",
+      previewVideo: "/previews_video/asmr.mp4",
     },
     {
-      id: "meme-style",
-      name: "Meme Format",
-      desc: "Humorous, relatable",
-      icon: "😂",
+      id: "cyber_glitch",
+      name: "Cyber Tech",
+      desc: "Futuristic neons and glitch effects",
+      icon: "🤖",
       premium: true,
-      category: "trending",
-      previewVideo: "https://example.com/meme-preview.mp4",
+      category: "creative",
+      previewVideo: "/previews_video/cyber_tech.mp4",
+    },
+    {
+      id: "surreal_abstract",
+      name: "Dreamy Surreal",
+      desc: "Physics-defying magic visuals",
+      icon: "🌌",
+      premium: true,
+      category: "premium",
+      previewVideo: "/previews_video/surreal.mp4",
     },
   ];
 
@@ -560,48 +609,6 @@ const GenerateAdContent = () => {
     );
   };
 
-  const CollapsibleSection = ({
-    id,
-    title,
-    icon,
-    children,
-    badge,
-  }: {
-    id: string;
-    title: string;
-    icon: any;
-    children: React.ReactNode;
-    badge?: string;
-  }) => {
-    const isExpanded = expandedSection === id;
-
-    return (
-      <Card className="overflow-hidden">
-        <button
-          onClick={() => setExpandedSection(isExpanded ? null : id)}
-          className="w-full p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">{icon}</div>
-            <div className="text-left">
-              <h3 className="font-semibold">{title}</h3>
-              {badge && (
-                <p className="text-xs text-muted-foreground mt-0.5">{badge}</p>
-              )}
-            </div>
-          </div>
-          <ChevronDown
-            className={`w-5 h-5 text-muted-foreground transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-
-        {isExpanded && <div className="p-5 pt-0 border-t">{children}</div>}
-      </Card>
-    );
-  };
-
   if (isPrefillingFromCampaign) {
     return (
       <div className="min-h-screen bg-background">
@@ -631,7 +638,7 @@ const GenerateAdContent = () => {
           </p>
         </div>
 
-        {/* Credits & Summary Bar */}
+        {/* Credits Bar */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
           <Card className="p-5">
             <div className="flex items-center gap-4">
@@ -646,17 +653,16 @@ const GenerateAdContent = () => {
               </div>
             </div>
           </Card>
-
           <Card className="p-5">
             <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-500/10">
-                <Wand2 className="w-6 h-6 text-green-600" />
+              <div className="p-3 rounded-xl bg-amber-500/10">
+                <Crown className="w-6 h-6 text-amber-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Videos to Generate
+                <p className="text-sm text-muted-foreground">Current Plan</p>
+                <p className="text-2xl font-bold capitalize">
+                  {userPlan?.plan || "Free"}
                 </p>
-                <p className="text-2xl font-bold">{creditsNeeded}</p>
               </div>
             </div>
           </Card>
@@ -724,37 +730,14 @@ const GenerateAdContent = () => {
 
           {/* Collapsible Sections */}
           <CollapsibleSection
-            id="basic"
-            title="Basic Info"
-            icon={<Info className="w-5 h-5 text-primary" />}
-            badge="Optional - AI can auto-generate"
-          >
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block text-sm">Campaign Name</Label>
-                <Input
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="e.g., Summer Sale 2024"
-                />
-              </div>
-              <div>
-                <Label className="mb-2 block text-sm">Description</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your product..."
-                  className="resize-none h-24"
-                />
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          <CollapsibleSection
             id="video"
             title="Video Settings"
             icon={<Film className="w-5 h-5 text-primary" />}
-            badge={`${selectedQuality} • ${selectedDuration}s`}
+            badge={`${selectedQuality} • ${selectedDuration}s • ${
+              languages.find((l) => l.code === selectedLanguage)?.flag
+            }`}
+            expandedSection={expandedSection}
+            setExpandedSection={setExpandedSection}
           >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -816,18 +799,76 @@ const GenerateAdContent = () => {
                   </div>
                 </Card>
               </div>
+
+              {/* Language Selector */}
+              <div>
+                <Label className="mb-2 block text-sm">Video Language</Label>
+                <Select
+                  value={selectedLanguage}
+                  onValueChange={setSelectedLanguage}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.code}>
+                        {lang.flag} {lang.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CollapsibleSection>
-
           <CollapsibleSection
-            id="style"
-            title="Style & Audio"
-            icon={<Palette className="w-5 h-5 text-primary" />}
-            badge={`${subtitlesEnabled ? "Subtitles" : "No subs"}${
-              musicEnabled ? " • Music" : ""
-            }`}
+            id="basic"
+            title="Basic Info (Optional)"
+            icon={<Info className="w-5 h-5 text-primary" />}
+            badge="Product details"
+            expandedSection={expandedSection}
+            setExpandedSection={setExpandedSection}
           >
             <div className="space-y-4">
+              <div>
+                <Label className="mb-2 block text-sm">Campaign Name</Label>
+                <Input
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="e.g., Summer Sale 2024"
+                />
+              </div>
+              <div>
+                <Label className="mb-2 block text-sm">Description</Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe your product..."
+                  className="resize-none h-24"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+          <CollapsibleSection
+            id="style"
+            title="Style & Audio (Optional)"
+            icon={<Palette className="w-5 h-5 text-muted-foreground" />}
+            badge={`${subtitlesEnabled ? "Subtitles" : ""}${
+              subtitlesEnabled && musicEnabled ? " • " : ""
+            }${musicEnabled ? "Music" : ""}${
+              !subtitlesEnabled && !musicEnabled ? "Default settings" : ""
+            }`}
+            expandedSection={expandedSection}
+            setExpandedSection={setExpandedSection}
+          >
+            <div className="space-y-4">
+              {/* <div className="bg-muted/30 border border-muted rounded-lg p-3 mb-4">
+                <p className="text-sm text-muted-foreground">
+                  ℹ️ These settings are optional. AI will use smart defaults if
+                  you don't customize them.
+                </p>
+              </div> */}
+
               {/* Main Subtitles Toggle Card */}
               <Card
                 className={`p-4 cursor-pointer transition-all duration-200 ${
@@ -914,61 +955,53 @@ const GenerateAdContent = () => {
                 )}
               </Card>
 
-              <div className="grid grid-cols-2 gap-3">
-                {/* Music Card */}
-                <Card
-                  className={`p-4 cursor-pointer transition-colors ${
-                    musicEnabled ? "ring-1 ring-primary" : "hover:bg-accent/50"
-                  }`}
-                  onClick={() => setMusicEnabled(!musicEnabled)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
+              {/* Music Card */}
+              <Card
+                className={`p-4 cursor-pointer transition-colors ${
+                  musicEnabled
+                    ? "ring-2 ring-primary bg-primary/5"
+                    : "hover:bg-accent/50"
+                }`}
+                onClick={() => setMusicEnabled(!musicEnabled)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2 rounded-full ${
+                        musicEnabled
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
+                      }`}
+                    >
                       {musicEnabled ? (
-                        <Volume2 className="w-4 h-4 text-primary" />
+                        <Volume2 className="w-5 h-5" />
                       ) : (
-                        <VolumeX className="w-4 h-4 text-muted-foreground" />
+                        <VolumeX className="w-5 h-5" />
                       )}
-                      <p className="font-medium text-sm">Background Music</p>
                     </div>
-                    <Checkbox
-                      checked={musicEnabled}
-                      onCheckedChange={(c) => setMusicEnabled(c as boolean)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div>
+                      <p className="font-semibold text-sm">Background Music</p>
+                      <p className="text-xs text-muted-foreground">
+                        {musicEnabled
+                          ? "Music will be added to your video"
+                          : "Enable background music for your video"}
+                      </p>
+                    </div>
                   </div>
-                </Card>
-
-                {/* Language Selector */}
-                <div className="flex flex-col">
-                  <Select
-                    value={selectedLanguage}
-                    onValueChange={setSelectedLanguage}
-                  >
-                    <SelectTrigger className="w-full h-full min-h-[52px] bg-card border shadow-sm">
-                      <div className="flex flex-col items-start gap-0.5">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">
-                          Video Language
-                        </span>
-                        <SelectValue />
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languages.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                          {lang.flag} {lang.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Checkbox
+                    checked={musicEnabled}
+                    onCheckedChange={(c) => setMusicEnabled(c as boolean)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
                 </div>
-              </div>
+              </Card>
             </div>
           </CollapsibleSection>
         </div>
 
         {/* Generate Button - Always Visible at Bottom */}
-        <Card className="p-6 mt-6  bottom-4 shadow-lg border-2">
+
+        <Card className="p-6 mt-6 bottom-4 shadow-lg border-2">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="font-semibold text-lg">Ready to Generate</p>
@@ -984,17 +1017,25 @@ const GenerateAdContent = () => {
                 )}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Credits</p>
-              <p
-                className={`text-2xl font-bold ${
-                  creditsNeeded > userCredits
-                    ? "text-destructive"
-                    : "text-primary"
-                }`}
-              >
-                {creditsNeeded} / {userCredits}
-              </p>
+            <div className="flex gap-6">
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Videos</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {creditsNeeded}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Credits</p>
+                <p
+                  className={`text-2xl font-bold ${
+                    creditsNeeded > userCredits
+                      ? "text-destructive"
+                      : "text-primary"
+                  }`}
+                >
+                  {creditsNeeded} / {userCredits}
+                </p>
+              </div>
             </div>
           </div>
 
