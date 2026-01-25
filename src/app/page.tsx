@@ -17,7 +17,7 @@ export default function HomePage() {
       <div className="">
         <Hero />
       </div>
-      <div className="-mt-28">
+      <div className="-mt-28" id="showcase">
         <AdTransformationShowcase />
       </div>
 

@@ -61,7 +61,7 @@ const MyContent = () => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [previewVideo, setPreviewVideo] = useState<any>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -71,7 +71,10 @@ const MyContent = () => {
   const [selectedVideoForCaption, setSelectedVideoForCaption] =
     useState<any>(null);
   const [loadingCaptions, setLoadingCaptions] = useState(false);
-
+  const [processingProgress, setProcessingProgress] = useState<
+    Record<string, number>
+  >({});
+  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const styleMapping: Record<
     string,
     {
@@ -211,7 +214,7 @@ const MyContent = () => {
               duration: project.duration,
               language: project.language,
               status: project.status,
-            }))
+            })),
           );
         }
       });
@@ -236,7 +239,7 @@ const MyContent = () => {
       setUserId(session.user.id);
 
       const response = await fetch(
-        `/api/connections?userId=${session.user.id}`
+        `/api/connections?userId=${session.user.id}`,
       );
       if (!response.ok) {
         return;
@@ -267,7 +270,7 @@ const MyContent = () => {
       }
 
       const response = await fetch(
-        `/api/getCampaigns?user_id=${session.user.id}`
+        `/api/getCampaigns?user_id=${session.user.id}`,
       );
       if (!response.ok) {
         setLoading(false);
@@ -280,7 +283,7 @@ const MyContent = () => {
         const fixedCampaigns = data.campaigns.map((campaign: Campaign) => {
           console.log(
             "🔍 Original product_image_url:",
-            campaign.product_image_url
+            campaign.product_image_url,
           );
 
           let imageUrl = campaign.product_image_url;
@@ -303,7 +306,7 @@ const MyContent = () => {
             console.warn(
               "⚠️ Invalid image URL for campaign:",
               campaign.name,
-              imageUrl
+              imageUrl,
             );
             imageUrl = "/placeholder-product.png";
           }
@@ -326,7 +329,44 @@ const MyContent = () => {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    const updateProgress = () => {
+      const now = Date.now();
+      setProcessingProgress((prev) => {
+        const updated = { ...prev };
+        campaigns.forEach((campaign) => {
+          const processingProjects = getProcessingProjects(campaign);
+          processingProjects.forEach((project) => {
+            const storageKey = `processing_start_${project.id}`;
+            let startTime = localStorage.getItem(storageKey);
+            if (!startTime) {
+              localStorage.setItem(storageKey, now.toString());
+              startTime = now.toString();
+            }
 
+            const elapsedSeconds = (now - parseInt(startTime)) / 1000;
+            let calculatedProgress = (elapsedSeconds / 230) * 100;
+
+            // Po 95% - spowolnij drastycznie
+            if (calculatedProgress >= 95) {
+              // Dodaj tylko 0.5% za każde kolejne 30 sekund po osiągnięciu 95%
+              const timeAfter95 = elapsedSeconds - 230 * 0.95;
+              const extraProgress = (timeAfter95 / 30) * 0.5;
+              calculatedProgress = 95 + Math.min(4.9, extraProgress); // Max 99.9%
+            }
+
+            updated[project.id] = Math.min(99.9, calculatedProgress);
+          });
+        });
+        return updated;
+      });
+    };
+
+    if (campaigns.length > 0) updateProgress();
+
+    const interval = setInterval(updateProgress, 1000);
+    return () => clearInterval(interval);
+  }, [campaigns]);
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     await fetchCampaigns(false);
@@ -369,7 +409,7 @@ const MyContent = () => {
   const handleGenerateMore = (campaign: Campaign) => {
     // Tylko campaign_id i prefill flag - reszta załaduje się z API
     router.push(
-      `/dashboard/generate-ad?campaign_id=${campaign.id}&prefill=true`
+      `/dashboard/generate-ad?campaign_id=${campaign.id}&prefill=true`,
     );
   };
 
@@ -379,7 +419,7 @@ const MyContent = () => {
 
       // Pobierz prawdziwe AI captions z bazy danych
       const response = await fetch(
-        `/api/get-video-captions?videoId=${video.id}`
+        `/api/get-video-captions?videoId=${video.id}`,
       );
 
       if (!response.ok) {
@@ -442,12 +482,12 @@ const MyContent = () => {
   // Calculate stats
   const totalVideos = campaigns.reduce(
     (sum, c) => sum + getVideosFromCampaign(c).length,
-    0
+    0,
   );
 
   const processingCount = campaigns.reduce((sum, c) => {
     const projectsCount = (c.projects || []).filter(
-      (p: any) => p.status === "processing"
+      (p: any) => p.status === "processing",
     ).length;
     return sum + projectsCount;
   }, 0);
@@ -455,7 +495,7 @@ const MyContent = () => {
   const readyCount = campaigns.reduce(
     (sum, c) =>
       sum + getVideosFromCampaign(c).filter((v) => v.video_url).length,
-    0
+    0,
   );
 
   if (loading) {
@@ -567,10 +607,10 @@ const MyContent = () => {
             const campaignVideos = getVideosFromCampaign(campaign);
             const processingProjects = getProcessingProjects(campaign);
             const processingVideos = campaignVideos.filter(
-              (v) => v.status === "processing"
+              (v) => v.status === "processing",
             );
             const readyVideos = campaignVideos.filter(
-              (v) => v.status === "ready" && v.video_url
+              (v) => v.status === "ready" && v.video_url,
             );
 
             return (
@@ -593,7 +633,7 @@ const MyContent = () => {
                         onError={(e) => {
                           console.error(
                             "❌ Image failed to load:",
-                            campaign.product_image_url
+                            campaign.product_image_url,
                           );
                           // Fallback to a colored div if image fails
                           const target = e.target as HTMLImageElement;
@@ -703,7 +743,7 @@ const MyContent = () => {
                             {/* Info banner */}
                             <div className="bg-orange-500/20 border border-orange-500/40 rounded-lg p-3 flex items-center gap-3">
                               <div className="bg-orange-500 p-2 rounded-lg">
-                                <Clock className="w-5 h-5 text-white animate-spin" />
+                                <Loader2 className="w-5 h-5 text-white animate-spin" />
                               </div>
                               <div className="flex-1">
                                 <p className="text-orange-200 font-semibold text-sm">
@@ -711,8 +751,9 @@ const MyContent = () => {
                                 </p>
                                 <p className="text-orange-300/80 text-xs">
                                   Average time: 2–4 minutes. The page refreshes
-                                  automatically every minute, or you can click
-                                  the Refresh button to check progress manually.
+                                  automatically every 30 seconds, or you can
+                                  click the Refresh button to check progress
+                                  manually.
                                 </p>
                               </div>
                             </div>
@@ -728,44 +769,52 @@ const MyContent = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           {processingProjects.map(
                             (project: any, idx: number) => {
-                              const colorScheme = getVideoColorScheme(idx);
-                              const videoIcon = getVideoIcon(idx);
+                              const progress =
+                                processingProgress[project.id] || 0;
+
                               return (
-                                <Card
+                                <div
                                   key={project.id}
-                                  className="bg-gray-900/50 border-orange-500/30 overflow-hidden"
+                                  className="bg-gray-900/30 border border-orange-500/20 rounded-xl p-5"
                                 >
-                                  <div className="relative">
+                                  {/* Header - minimalistyczny */}
+                                  <div className="flex items-center justify-between mb-4">
+                                    <span className="text-white text-sm font-medium">
+                                      Generating video
+                                    </span>
+                                    <span className="text-orange-400 font-semibold tabular-nums">
+                                      {Math.round(progress)}%
+                                    </span>
+                                  </div>
+
+                                  {/* Progress bar - clean */}
+                                  <div className="relative w-full bg-gray-800/50 rounded-full h-2 overflow-hidden mb-4">
                                     <div
-                                      className={`aspect-[9/16] bg-gradient-to-br ${colorScheme.bg} flex items-center justify-center`}
-                                    >
-                                      <div className="text-6xl animate-pulse">
-                                        {videoIcon}
-                                      </div>
-                                    </div>
-                                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center rounded-lg">
-                                      <div className="text-center text-white">
-                                        {/* Loader2 wygląda znacznie lepiej przy animacji spin */}
-                                        <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin text-white/90" />
-                                        <p className="text-sm font-medium tracking-wide">
-                                          Generating...
-                                        </p>
-                                      </div>
-                                    </div>
+                                      className="absolute inset-y-0 left-0 bg-orange-500 transition-all duration-1000 ease-out"
+                                      style={{ width: `${progress}%` }}
+                                    />
                                   </div>
-                                  <div className="p-3">
-                                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 mb-2">
-                                      <Clock className="w-3 h-3 mr-1" />
-                                      Processing
-                                    </Badge>
-                                    <div className="text-xs text-gray-400">
-                                      {project.quality} • {project.duration}s •{" "}
+
+                                  {/* Footer - minimal info */}
+                                  <div className="flex items-center justify-between text-xs text-gray-500">
+                                    <span>
+                                      {project.quality} · {project.duration}s ·{" "}
                                       {project.language?.toUpperCase() || "EN"}
-                                    </div>
+                                    </span>
+                                    <span>
+                                      ~
+                                      {Math.max(
+                                        0,
+                                        Math.round(
+                                          (230 * (100 - progress)) / 100,
+                                        ),
+                                      )}
+                                      s
+                                    </span>
                                   </div>
-                                </Card>
+                                </div>
                               );
-                            }
+                            },
                           )}
                         </div>
                       </div>
@@ -812,6 +861,16 @@ const MyContent = () => {
                                       src={video.video_url}
                                       className="w-full h-full object-cover"
                                       muted
+                                      loop
+                                      onMouseEnter={(e) => {
+                                        setHoveredVideoId(video.id);
+                                        e.currentTarget.play();
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        setHoveredVideoId(null);
+                                        e.currentTarget.pause();
+                                        e.currentTarget.currentTime = 0;
+                                      }}
                                     />
                                   ) : (
                                     <div
@@ -875,7 +934,7 @@ const MyContent = () => {
                                     {video.quality} • {video.duration}s •{" "}
                                     {video.language?.toUpperCase() || "EN"} •{" "}
                                     {new Date(
-                                      video.created_at
+                                      video.created_at,
                                     ).toLocaleDateString()}
                                   </p>
 
@@ -1048,8 +1107,8 @@ const MyContent = () => {
                   onClick={async () => {
                     const campaign = campaigns.find((c) =>
                       getVideosFromCampaign(c).some(
-                        (v) => v.id === previewVideo.id
-                      )
+                        (v) => v.id === previewVideo.id,
+                      ),
                     );
                     if (campaign) {
                       setPreviewVideo(null);

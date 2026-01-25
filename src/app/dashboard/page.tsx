@@ -25,7 +25,7 @@ const Dashboard = () => {
   const [connectedPlatforms, setConnectedPlatforms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
-    null
+    null,
   );
   const router = useRouter();
 
@@ -93,7 +93,7 @@ const Dashboard = () => {
       if (status === "connected") {
         setTimeout(() => {
           alert(
-            "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok."
+            "🎉 TikTok connected successfully!\n\nYou can now post videos to TikTok.",
           );
         }, 500);
         window.history.replaceState({}, "", "/dashboard#connect");
@@ -129,7 +129,7 @@ const Dashboard = () => {
       const { connections } = await response.json();
 
       const connectedPlatformIds = connections.map(
-        (conn: any) => conn.platform
+        (conn: any) => conn.platform,
       );
       setConnectedPlatforms(connectedPlatformIds);
     } catch (error) {
@@ -188,7 +188,7 @@ const Dashboard = () => {
       ) {
         console.error("❌ Invalid redirect URI:", redirectUri);
         alert(
-          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env",
         );
         setConnectingPlatform(null);
         return;
@@ -198,7 +198,7 @@ const Dashboard = () => {
 
       // TikTok OAuth Scopes
       const scopes = ["user.info.basic", "video.upload", "video.publish"].join(
-        ","
+        ",",
       );
 
       console.log("🔑 Using TikTok scopes:", scopes);
@@ -249,7 +249,7 @@ const Dashboard = () => {
       ) {
         console.error("❌ Invalid redirect URI:", redirectUri);
         alert(
-          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env",
         );
         setConnectingPlatform(null);
         return;
@@ -307,7 +307,7 @@ const Dashboard = () => {
 
       if (!hasInstagram) {
         alert(
-          "⚠️ Please connect Instagram first!\n\nFacebook posting requires Instagram connection with a Facebook Page."
+          "⚠️ Please connect Instagram first!\n\nFacebook posting requires Instagram connection with a Facebook Page.",
         );
         setConnectingPlatform(null);
         return;
@@ -335,7 +335,7 @@ const Dashboard = () => {
       setConnectingPlatform(null);
 
       alert(
-        "🎉 Facebook connected successfully!\n\nYou can now post videos to your Facebook Page."
+        "🎉 Facebook connected successfully!\n\nYou can now post videos to your Facebook Page.",
       );
     } catch (error) {
       console.error("❌ Error connecting Facebook:", error);
@@ -368,7 +368,7 @@ const Dashboard = () => {
       ) {
         console.error("❌ Invalid redirect URI:", redirectUri);
         alert(
-          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env"
+          "Configuration error: Invalid redirect URI. Check NEXT_PUBLIC_APP_URL in .env",
         );
         setConnectingPlatform(null);
         return;
@@ -417,7 +417,7 @@ const Dashboard = () => {
     // If platform is not available yet
     if (!platform?.available) {
       alert(
-        "🚧 This platform is coming soon!\n\nWe're working on integrating more platforms. Stay tuned!"
+        "🚧 This platform is coming soon!\n\nWe're working on integrating more platforms. Stay tuned!",
       );
       return;
     }
@@ -425,7 +425,7 @@ const Dashboard = () => {
     // If already connected, show disconnect option
     if (connectedPlatforms.includes(platformId)) {
       const shouldDisconnect = confirm(
-        `Do you want to disconnect ${platform.name}?`
+        `Do you want to disconnect ${platform.name}?`,
       );
       if (shouldDisconnect) {
         await disconnectPlatform(platformId);
@@ -616,7 +616,7 @@ const Dashboard = () => {
         </div>
 
         {/* Stats Overview */}
-        <div className="mb-12">
+        {/* <div className="mb-12">
           <h2 className="text-2xl font-bold mb-6">Performance Overview</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="p-6 bg-card border-border hover:border-primary/30 transition-colors">
@@ -665,7 +665,7 @@ const Dashboard = () => {
               <p className="text-sm text-green-500 mt-2">+12% vs last week</p>
             </Card>
           </div>
-        </div>
+        </div> */}
 
         {/* Connected Accounts Section */}
         <div id="connect">
@@ -712,8 +712,8 @@ const Dashboard = () => {
                     isConnected
                       ? "border-2 border-primary bg-primary/10 hover:bg-primary/15 shadow-md"
                       : isAvailable
-                      ? "border-2 border-border hover:border-primary/50 hover:shadow-md"
-                      : "border-2 border-dashed border-muted-foreground/30"
+                        ? "border-2 border-border hover:border-primary/50 hover:shadow-md"
+                        : "border-2 border-dashed border-muted-foreground/30"
                   }`}
                   onClick={() =>
                     !isConnecting && handlePlatformClick(platform.id)
@@ -751,8 +751,8 @@ const Dashboard = () => {
                         {isConnected
                           ? "Connected"
                           : !isAvailable
-                          ? "Coming soon"
-                          : "Not connected"}
+                            ? "Coming soon"
+                            : "Not connected"}
                       </p>
                     </div>
                   </div>
@@ -851,7 +851,7 @@ const Dashboard = () => {
               <div className="flex-1">
                 <h3 className="font-bold text-xl mb-2">Pro Tip</h3>
                 <p className="text-muted-foreground">
-                  Connect your YouTube account to automatically post
+                  Connect your YouTube or Tiktok account to automatically post
                   AI-generated Shorts. Each video style costs 15 credits, and
                   you can generate multiple styles in one campaign for maximum
                   reach! More platforms (Instagram, TikTok, Facebook) coming

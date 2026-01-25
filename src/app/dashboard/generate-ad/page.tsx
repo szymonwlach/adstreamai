@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useState, useRef, Suspense } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  Suspense,
+  useCallback,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Upload,
@@ -115,7 +121,7 @@ const GenerateAdContent = () => {
 
   // Collapsed sections
   const [expandedSection, setExpandedSection] = useState<string | null>(
-    "styles"
+    "styles",
   );
 
   const prevCampaignIdRef = useRef<string | null>(null);
@@ -220,7 +226,7 @@ const GenerateAdContent = () => {
       name: "ASMR/Satisfying",
       desc: "Focus on textures and close-ups",
       icon: "🎧",
-      premium: true,
+      premium: false,
       category: "trending",
       previewVideo: "/previews_video/asmr.mp4",
     },
@@ -229,7 +235,7 @@ const GenerateAdContent = () => {
       name: "Cyber Tech",
       desc: "Futuristic neons and glitch effects",
       icon: "🤖",
-      premium: true,
+      premium: false,
       category: "creative",
       previewVideo: "/previews_video/cyber_tech.mp4",
     },
@@ -289,7 +295,7 @@ const GenerateAdContent = () => {
           data: { session },
         } = await supabase.auth.getSession();
         const response = await fetch(
-          `/api/getCampaigns?user_id=${session?.user.id}`
+          `/api/getCampaigns?user_id=${session?.user.id}`,
         );
         const data = await response.json();
         const campaign = data.campaigns.find((c: any) => c.id === campaignId);
@@ -331,26 +337,24 @@ const GenerateAdContent = () => {
   const canUse1080p = !isFreeUser;
   const canUse15sec = !isFreeUser && selectedQuality === "1080p";
 
-  const toggleStyle = (styleId: string, isPremium: boolean) => {
-    if (isPremium && isFreeUser) {
-      toast.warning("Premium Feature", {
-        description: "Upgrade to unlock all video styles!",
-        icon: <Crown className="w-5 h-5 text-amber-500" />,
-        action: {
-          label: "Upgrade",
-          onClick: () => router.push("/dashboard/pricing"),
-        },
-      });
-      return;
-    }
+  const toggleStyle = useCallback(
+    (styleId: string, isPremium: boolean) => {
+      if (isPremium && isFreeUser) {
+        toast.warning("Premium Feature", {
+          description: "Upgrade to unlock all video styles!",
+          icon: <Crown className="w-5 h-5 text-amber-500" />,
+          action: {
+            label: "Upgrade",
+            onClick: () => router.push("/dashboard/pricing"),
+          },
+        });
+        return;
+      }
 
-    setSelectedStyles((prev) =>
-      prev.includes(styleId)
-        ? prev.filter((id) => id !== styleId)
-        : [...prev, styleId]
-    );
-  };
-
+      setSelectedStyles((prev) => (prev.includes(styleId) ? [] : [styleId]));
+    },
+    [isFreeUser, router],
+  );
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -403,7 +407,7 @@ const GenerateAdContent = () => {
       });
 
       toast.success(
-        `${files.length} image${files.length > 1 ? "s" : ""} uploaded`
+        `${files.length} image${files.length > 1 ? "s" : ""} uploaded`,
       );
     } catch (error) {
       console.error("Upload error:", error);
@@ -447,7 +451,7 @@ const GenerateAdContent = () => {
       const projectData = {
         user_id: session.user.id,
         product_url: productImages,
-        selected_style: selectedStyles, // Backend chce selected_style (bez s)
+        selected_style: selectedStyles,
         name: campaignName.trim() || null,
         description: description.trim() || null,
         language: selectedLanguage,
@@ -475,7 +479,7 @@ const GenerateAdContent = () => {
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json();
         throw new Error(
-          errorData.details || errorData.error || "Failed to save project"
+          errorData.details || errorData.error || "Failed to save project",
         );
       }
 
@@ -522,7 +526,7 @@ const GenerateAdContent = () => {
       }
 
       toast.success(
-        campaignId ? "More ads are being generated!" : "Campaign created!"
+        campaignId ? "More ads are being generated!" : "Campaign created!",
       );
       router.push("/dashboard/my-ads?refresh=true");
     } catch (error) {
@@ -532,47 +536,64 @@ const GenerateAdContent = () => {
       toast.error("Failed to generate ads", { description: errorMessage });
     }
   };
+  const StyleCard = React.memo(
+    ({
+      style,
+      isSelected,
+      onToggle,
+    }: {
+      style: any;
+      isSelected: boolean;
+      onToggle: (styleId: string, isPremium: boolean) => void;
+    }) => {
+      const isLocked = style.premium && isFreeUser;
+      const videoRef = useRef<HTMLVideoElement>(null);
 
-  const StyleCard = ({ style }: { style: any }) => {
-    const isSelected = selectedStyles.includes(style.id);
-    const isLocked = style.premium && isFreeUser;
-    const isHovered = hoveredStyle === style.id;
+      const handleMouseEnter = () => {
+        if (!isLocked && videoRef.current) {
+          videoRef.current.play().catch(() => {});
+        }
+      };
 
-    return (
-      <Card
-        className={`relative overflow-hidden transition-all duration-300 ${
-          isLocked
-            ? "opacity-60 cursor-not-allowed"
-            : `cursor-pointer hover:shadow-lg ${
-                isSelected
-                  ? "ring-2 ring-primary shadow-md"
-                  : "hover:ring-1 hover:ring-primary/50"
-              }`
-        }`}
-        onClick={() => toggleStyle(style.id, style.premium)}
-        onMouseEnter={() => !isLocked && setHoveredStyle(style.id)}
-        onMouseLeave={() => setHoveredStyle(null)}
-      >
-        {/* Preview Video */}
-        <div className="relative aspect-[9/16] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
-          {style.previewVideo ? (
-            <>
-              <video
-                src={style.previewVideo}
-                className="absolute inset-0 w-full h-full object-cover"
-                loop
-                muted
-                playsInline
-                autoPlay={isHovered && !isLocked}
-              />
-              {isHovered && !isLocked && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 pointer-events-none"></div>
-              )}
-            </>
-          ) : (
-            <>
-              {isHovered && !isLocked ? (
-                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
+      const handleMouseLeave = () => {
+        if (videoRef.current) {
+          videoRef.current.pause();
+          videoRef.current.currentTime = 0;
+        }
+      };
+
+      return (
+        <Card
+          className={`relative overflow-hidden transition-all duration-300 group ${
+            isLocked
+              ? "opacity-60 cursor-not-allowed"
+              : `cursor-pointer hover:shadow-lg ${
+                  isSelected
+                    ? "ring-2 ring-primary shadow-md"
+                    : "hover:ring-1 hover:ring-primary/50"
+                }`
+          }`}
+          onClick={() => onToggle(style.id, style.premium)}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="relative aspect-[9/16] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
+            {style.previewVideo ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={style.previewVideo}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />
+              </>
+            ) : (
+              <>
+                <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
                   <div className="text-center space-y-3">
                     <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto backdrop-blur-sm">
                       <Play className="w-8 h-8 text-white fill-white" />
@@ -582,32 +603,30 @@ const GenerateAdContent = () => {
                     </p>
                   </div>
                 </div>
-              ) : (
                 <span className="text-6xl opacity-20">{style.icon}</span>
-              )}
-            </>
-          )}
-          {isSelected && (
-            <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center z-20">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="p-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{style.icon}</span>
-            <h4 className="font-semibold text-sm">{style.name}</h4>
-            {isLocked && (
-              <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
+              </>
+            )}
+            {isSelected && (
+              <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center z-20">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{style.desc}</p>
-        </div>
-      </Card>
-    );
-  };
+
+          <div className="p-3 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{style.icon}</span>
+              <h4 className="font-semibold text-sm">{style.name}</h4>
+              {isLocked && (
+                <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{style.desc}</p>
+          </div>
+        </Card>
+      );
+    },
+  );
 
   if (isPrefillingFromCampaign) {
     return (
@@ -715,7 +734,7 @@ const GenerateAdContent = () => {
           {/* Video Styles - Always Visible & Prominent */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <Label className="text-lg">Choose Video Styles *</Label>
+              <Label className="text-lg">Choose Video Style *</Label>
               <span className="text-sm text-muted-foreground">
                 {selectedStyles.length} selected
               </span>
@@ -723,7 +742,12 @@ const GenerateAdContent = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {videoStyles.map((style) => (
-                <StyleCard key={style.id} style={style} />
+                <StyleCard
+                  key={style.id}
+                  style={style}
+                  isSelected={selectedStyles.includes(style.id)}
+                  onToggle={toggleStyle}
+                />
               ))}
             </div>
           </Card>
