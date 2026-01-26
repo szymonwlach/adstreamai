@@ -571,14 +571,14 @@ const AdTransformationShowcase = () => {
             {/* Navigation - Mobile only (between video and photo) */}
             <button
               onClick={prevDemo}
-              className="lg:hidden absolute left-2 sm:left-4 top-[55%] sm:top-[58%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+              className="lg:hidden absolute left-2 sm:left-4 top-[40%] sm:top-[43%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
               aria-label="Previous"
             >
               <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
             </button>
             <button
               onClick={nextDemo}
-              className="lg:hidden absolute right-2 sm:right-4 top-[55%] sm:top-[58%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+              className="lg:hidden absolute right-2 sm:right-4 top-[40%] sm:top-[43%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
               aria-label="Next"
             >
               <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
