@@ -289,16 +289,9 @@ import {
   CheckCircle2,
   ArrowRight,
   Camera,
-  Wand2,
-  BookOpen,
-  Coffee,
-  Gift,
-  Eye,
-  Cpu,
-  Film,
-  RotateCcw,
   Clock,
   Palette,
+  RotateCcw,
 } from "lucide-react";
 
 const AdTransformationShowcase = () => {
@@ -306,11 +299,11 @@ const AdTransformationShowcase = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [videoLoading, setVideoLoading] = useState(true);
   const [showPoster, setShowPoster] = useState(true);
+  const [showMetrics, setShowMetrics] = useState(true);
   const videoRef = useRef(null);
   const sectionRef = useRef(null);
   const preloadRefs = useRef({});
 
-  // Tylko style które mamy w demo
   const availableStyles = [
     {
       id: "ugc",
@@ -363,7 +356,6 @@ const AdTransformationShowcase = () => {
       videoFile: "/previews_video/skin_care2.mp4",
       metrics: { engagement: "87%", ctr: "7.2%", conversions: "+280%" },
     },
-
     {
       id: 3,
       title: "Luxury Watch",
@@ -386,10 +378,8 @@ const AdTransformationShowcase = () => {
 
   const currentDemo = demos[currentIndex];
 
-  // Preload kolejnych filmów w tle
   useEffect(() => {
     const preloadNext = () => {
-      // Ładuj 2 następne filmy
       for (let i = 1; i <= 2; i++) {
         const nextIndex = (currentIndex + i) % demos.length;
         const nextDemo = demos[nextIndex];
@@ -409,7 +399,6 @@ const AdTransformationShowcase = () => {
     preloadNext();
 
     return () => {
-      // Cleanup - usuń stare preloady
       Object.keys(preloadRefs.current).forEach((key) => {
         const index = parseInt(key);
         if (Math.abs(index - currentIndex) > 2) {
@@ -494,49 +483,34 @@ const AdTransformationShowcase = () => {
     return availableStyles.find((s) => s.id === styleId) || availableStyles[0];
   };
 
-  const goToStyleDemo = (styleId) => {
-    const demoIndex = demos.findIndex((d) => d.style === styleId);
-    if (demoIndex !== -1) {
-      setCurrentIndex(demoIndex);
-      sectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  };
-
   return (
     <section
       ref={sectionRef}
-      className="relative py-20 sm:py-32 overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background"
+      className="relative py-12 sm:py-20 lg:py-32 overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background"
     >
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden">
         <div
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse"
+          className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-primary/10 rounded-full blur-3xl animate-pulse"
           style={{ animationDuration: "4s" }}
         />
         <div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse"
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-accent/10 rounded-full blur-3xl animate-pulse"
           style={{ animationDuration: "6s", animationDelay: "2s" }}
-        />
-        <div
-          className="absolute top-1/2 left-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse"
-          style={{ animationDuration: "8s", animationDelay: "4s" }}
         />
       </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center max-w-4xl mx-auto mb-12 sm:mb-16 space-y-4 sm:space-y-6">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm font-semibold text-primary">
+        <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4 lg:space-y-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary animate-pulse" />
+            <span className="text-xs sm:text-sm font-semibold text-primary">
               AI-Powered Transformation
             </span>
           </div>
 
-          <h2 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight px-4">
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
               One Photo.
             </span>
@@ -544,69 +518,75 @@ const AdTransformationShowcase = () => {
             <span className="text-foreground">Infinite Possibilities.</span>
           </h2>
 
-          <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto px-4">
             Transform your product into high-converting ads in under 4 minutes.
             Choose from 12 proven styles that drive real results.
           </p>
         </div>
 
-        {/* Social Proof Bar - Updated with truthful claims */}
-        <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-12 mb-12 sm:mb-16 text-sm">
+        {/* Social Proof Bar */}
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 lg:gap-12 mb-8 sm:mb-12 lg:mb-16 text-sm px-4">
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Under 4 min creation</span>
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Under 4 min creation
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-accent" />
-            <span className="text-muted-foreground">12 unique styles</span>
+            <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              12 unique styles
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-green-500" />
-            <span className="text-muted-foreground">Cinema-quality HD</span>
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Cinema-quality HD
+            </span>
           </div>
         </div>
 
         {/* Main Showcase */}
         <div className="max-w-7xl mx-auto">
           <div className="relative">
-            {/* Navigation - Always visible */}
+            {/* Navigation - Desktop only */}
             <button
               onClick={prevDemo}
-              className="hidden sm:flex absolute -left-4 lg:-left-20 top-1/2 -translate-y-1/2 z-20 p-3 sm:p-4 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-xl hover:scale-110 transition-all group items-center justify-center"
+              className="hidden lg:flex absolute -left-4 xl:-left-20 top-1/2 -translate-y-1/2 z-20 p-3 lg:p-4 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-xl hover:scale-110 transition-all group items-center justify-center"
               aria-label="Previous"
             >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground group-hover:text-primary" />
+              <ChevronLeft className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground group-hover:text-primary" />
             </button>
             <button
               onClick={nextDemo}
-              className="hidden sm:flex absolute -right-4 lg:-right-20 top-1/2 -translate-y-1/2 z-20 p-3 sm:p-4 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-xl hover:scale-110 transition-all group items-center justify-center"
+              className="hidden lg:flex absolute -right-4 xl:-right-20 top-1/2 -translate-y-1/2 z-20 p-3 lg:p-4 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-xl hover:scale-110 transition-all group items-center justify-center"
               aria-label="Next"
             >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground group-hover:text-primary" />
+              <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground group-hover:text-primary" />
             </button>
 
-            <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center">
+            <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
               {/* Before */}
               <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-transparent rounded-3xl blur-2xl opacity-50" />
+                <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-primary/20 to-transparent rounded-3xl blur-2xl opacity-50" />
                 <div className="relative">
                   <div className="mb-4 sm:mb-6 text-center lg:text-left">
                     <p className="text-xs sm:text-sm font-semibold text-primary uppercase tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-2">
                       <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                       Step 1: Upload
                     </p>
-                    <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                       {currentDemo.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                       {currentDemo.industry}
                     </p>
                   </div>
 
                   <div className="relative group">
-                    <div className="absolute -inset-2 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-                    <div className="relative bg-background/50 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-border shadow-2xl">
-                      <div className="relative w-full max-w-[450px] mx-auto aspect-square rounded-2xl overflow-hidden bg-muted/30">
+                    <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl sm:rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                    <div className="relative bg-background/50 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-6 border border-border shadow-2xl">
+                      <div className="relative w-full max-w-[400px] lg:max-w-[450px] mx-auto aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-muted/30">
                         <img
                           src={currentDemo.beforeImage}
                           alt={currentDemo.title}
@@ -614,7 +594,7 @@ const AdTransformationShowcase = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-                        <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/80 backdrop-blur-sm text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-black/80 backdrop-blur-sm text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                           Just one photo needed ✨
                         </div>
                       </div>
@@ -625,14 +605,14 @@ const AdTransformationShowcase = () => {
 
               {/* After */}
               <div className="relative order-1 lg:order-2">
-                <div className="absolute -inset-4 bg-gradient-to-br from-accent/30 to-primary/30 rounded-3xl blur-2xl opacity-50" />
+                <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-accent/30 to-primary/30 rounded-3xl blur-2xl opacity-50" />
                 <div className="relative">
                   <div className="mb-4 sm:mb-6 text-center lg:text-left">
                     <p className="text-xs sm:text-sm font-semibold text-accent uppercase tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-2">
                       <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
                       Step 2: AI Magic
                     </p>
-                    <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                       Ready in &lt;4 Minutes
                     </h3>
                     <div className="flex items-center gap-2 mt-2 justify-center lg:justify-start">
@@ -641,8 +621,8 @@ const AdTransformationShowcase = () => {
                         const Icon = styleInfo.icon;
                         return (
                           <>
-                            <Icon className="w-4 h-4 text-accent" />
-                            <p className="text-sm text-accent">
+                            <Icon className="w-3 h-3 sm:w-4 sm:h-4 text-accent" />
+                            <p className="text-xs sm:text-sm text-accent">
                               {styleInfo.name} Style
                             </p>
                           </>
@@ -652,10 +632,10 @@ const AdTransformationShowcase = () => {
                   </div>
 
                   <div className="relative group">
-                    <div className="absolute -inset-2 bg-gradient-to-br from-accent/20 to-primary/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-                    <div className="relative bg-background/50 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-border shadow-2xl">
-                      <div className="relative w-full max-w-[450px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-2xl">
-                        {/* Poster image - pokazuje się podczas ładowania */}
+                    <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-accent/20 to-primary/20 rounded-2xl sm:rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                    <div className="relative bg-background/50 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-6 border border-border shadow-2xl">
+                      <div className="relative w-full max-w-[280px] sm:max-w-[350px] lg:max-w-[450px] mx-auto aspect-[9/16] rounded-xl sm:rounded-2xl overflow-hidden bg-black shadow-2xl">
+                        {/* Poster image */}
                         {showPoster && (
                           <div className="absolute inset-0 z-10 bg-black flex items-center justify-center transition-opacity duration-300">
                             <img
@@ -665,9 +645,9 @@ const AdTransformationShowcase = () => {
                             />
                             {videoLoading && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                                <div className="flex flex-col items-center gap-3">
-                                  <RotateCcw className="w-8 h-8 text-white animate-spin" />
-                                  <span className="text-white text-sm font-medium">
+                                <div className="flex flex-col items-center gap-2 sm:gap-3">
+                                  <RotateCcw className="w-6 h-6 sm:w-8 sm:h-8 text-white animate-spin" />
+                                  <span className="text-white text-xs sm:text-sm font-medium">
                                     Loading video...
                                   </span>
                                 </div>
@@ -692,35 +672,45 @@ const AdTransformationShowcase = () => {
                           />
                         </video>
 
-                        {/* Metrics overlay - Visible on hover */}
-                        <div className="absolute top-4 left-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <div className="px-3 py-2 rounded-lg bg-gradient-to-r from-green-500/90 to-emerald-500/90 backdrop-blur-md text-sm text-white font-bold inline-flex items-center gap-2 w-fit shadow-lg">
-                            <TrendingUp className="w-4 h-4" />
+                        {/* Metrics overlay - Always visible */}
+                        <div
+                          className={`absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col gap-1.5 sm:gap-2 transition-opacity duration-300 ${showMetrics ? "opacity-100" : "opacity-0 lg:opacity-0 lg:group-hover:opacity-100"}`}
+                        >
+                          <div className="px-2 py-1 sm:px-3 sm:py-2 rounded-md sm:rounded-lg bg-gradient-to-r from-green-500/90 to-emerald-500/90 backdrop-blur-md text-xs sm:text-sm text-white font-bold inline-flex items-center gap-1.5 sm:gap-2 w-fit shadow-lg">
+                            <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>
                               {currentDemo.metrics.engagement} Engagement
                             </span>
                           </div>
-                          <div className="px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-md text-sm text-white font-bold inline-flex items-center gap-2 w-fit shadow-lg">
-                            <Zap className="w-4 h-4" />
+                          <div className="px-2 py-1 sm:px-3 sm:py-2 rounded-md sm:rounded-lg bg-gradient-to-r from-blue-500/90 to-cyan-500/90 backdrop-blur-md text-xs sm:text-sm text-white font-bold inline-flex items-center gap-1.5 sm:gap-2 w-fit shadow-lg">
+                            <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>{currentDemo.metrics.ctr} CTR</span>
                           </div>
-                          <div className="px-3 py-2 rounded-lg bg-gradient-to-r from-purple-500/90 to-pink-500/90 backdrop-blur-md text-sm text-white font-bold inline-flex items-center gap-2 w-fit shadow-lg animate-pulse">
-                            <ArrowRight className="w-4 h-4" />
+                          <div className="px-2 py-1 sm:px-3 sm:py-2 rounded-md sm:rounded-lg bg-gradient-to-r from-purple-500/90 to-pink-500/90 backdrop-blur-md text-xs sm:text-sm text-white font-bold inline-flex items-center gap-1.5 sm:gap-2 w-fit shadow-lg animate-pulse">
+                            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span>
                               {currentDemo.metrics.conversions} Conversions
                             </span>
                           </div>
                         </div>
 
+                        {/* Toggle metrics button - Mobile only */}
+                        <button
+                          onClick={() => setShowMetrics(!showMetrics)}
+                          className="lg:hidden absolute top-2 sm:top-4 right-2 sm:right-4 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-xs font-semibold z-10"
+                        >
+                          {showMetrics ? "📊" : "👁️"}
+                        </button>
+
                         <button
                           onClick={toggleMute}
-                          className="absolute bottom-4 right-4 p-3 sm:p-4 rounded-full bg-white/90 backdrop-blur-sm shadow-2xl hover:bg-white transition-all hover:scale-110"
+                          className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 p-2.5 sm:p-3 lg:p-4 rounded-full bg-white/90 backdrop-blur-sm shadow-2xl hover:bg-white transition-all hover:scale-110"
                           aria-label={isMuted ? "Unmute" : "Mute"}
                         >
                           {isMuted ? (
-                            <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
+                            <VolumeX className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-black" />
                           ) : (
-                            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
+                            <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-black" />
                           )}
                         </button>
                       </div>
@@ -730,16 +720,34 @@ const AdTransformationShowcase = () => {
               </div>
             </div>
 
+            {/* Mobile Navigation Buttons */}
+            <div className="flex lg:hidden justify-center gap-4 mt-6">
+              <button
+                onClick={prevDemo}
+                className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-lg active:scale-95 transition-all"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+              </button>
+              <button
+                onClick={nextDemo}
+                className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-lg active:scale-95 transition-all"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+
             {/* Dots */}
-            <div className="flex justify-center gap-2 mt-8 sm:mt-12">
+            <div className="flex justify-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 lg:mt-12">
               {demos.map((demo, index) => (
                 <button
                   key={demo.id}
                   onClick={() => setCurrentIndex(index)}
                   className={`transition-all duration-300 rounded-full ${
                     index === currentIndex
-                      ? "w-8 sm:w-12 h-2 sm:h-3 bg-gradient-to-r from-primary to-accent"
-                      : "w-2 sm:w-3 h-2 sm:h-3 bg-muted hover:bg-muted-foreground/50"
+                      ? "w-6 sm:w-8 lg:w-12 h-2 sm:h-2.5 lg:h-3 bg-gradient-to-r from-primary to-accent"
+                      : "w-2 sm:w-2.5 lg:w-3 h-2 sm:h-2.5 lg:h-3 bg-muted hover:bg-muted-foreground/50"
                   }`}
                   aria-label={`View ${demo.title}`}
                 />
@@ -749,51 +757,51 @@ const AdTransformationShowcase = () => {
         </div>
 
         {/* Value Props */}
-        <div className="mt-20 sm:mt-32 max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+        <div className="mt-12 sm:mt-16 lg:mt-32 max-w-6xl mx-auto px-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-8">
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative text-center p-6 sm:p-8 rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-primary/50 transition-all">
-                <div className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative text-center p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-primary/50 transition-all">
+                <div className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1.5 sm:mb-2 lg:mb-3">
                   &lt;4min
                 </div>
-                <p className="text-muted-foreground font-medium">
-                  Average Creation Time
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                  Average Creation
                 </p>
               </div>
             </div>
 
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative text-center p-6 sm:p-8 rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-accent/50 transition-all">
-                <div className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-transparent rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative text-center p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-accent/50 transition-all">
+                <div className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-1.5 sm:mb-2 lg:mb-3">
                   12
                 </div>
-                <p className="text-muted-foreground font-medium">
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
                   Proven Styles
                 </p>
               </div>
             </div>
 
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative text-center p-6 sm:p-8 rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-primary/50 transition-all">
-                <div className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative text-center p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-primary/50 transition-all">
+                <div className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-1.5 sm:mb-2 lg:mb-3">
                   AI
                 </div>
-                <p className="text-muted-foreground font-medium">
-                  Powered Generation
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+                  Powered Gen
                 </p>
               </div>
             </div>
 
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative text-center p-6 sm:p-8 rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-accent/50 transition-all">
-                <div className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-transparent rounded-xl sm:rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative text-center p-4 sm:p-6 lg:p-8 rounded-xl sm:rounded-2xl bg-background/50 backdrop-blur-sm border border-border group-hover:border-accent/50 transition-all">
+                <div className="text-2xl sm:text-3xl lg:text-5xl font-bold bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent mb-1.5 sm:mb-2 lg:mb-3">
                   HD
                 </div>
-                <p className="text-muted-foreground font-medium">
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium">
                   Cinema Quality
                 </p>
               </div>
@@ -802,12 +810,12 @@ const AdTransformationShowcase = () => {
         </div>
 
         {/* CTA */}
-        <div className="mt-16 sm:mt-20 text-center">
-          <button className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-primary to-accent text-white font-bold text-lg shadow-xl shadow-primary/50 hover:shadow-2xl hover:shadow-primary/60 transition-all hover:scale-105">
+        <div className="mt-12 sm:mt-16 lg:mt-20 text-center px-4">
+          <button className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-primary to-accent text-white font-bold text-base sm:text-lg shadow-xl shadow-primary/50 hover:shadow-2xl hover:shadow-primary/60 transition-all hover:scale-105 active:scale-95">
             <span>Start Creating Now</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
           </button>
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-muted-foreground">
             No credit card required • 3 free ads to start
           </p>
         </div>
