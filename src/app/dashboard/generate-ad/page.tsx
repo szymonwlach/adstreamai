@@ -25,6 +25,8 @@ import {
   Palette,
   ChevronDown,
   Play,
+  Camera,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -244,7 +246,7 @@ const GenerateAdContent = () => {
       name: "Dreamy Surreal",
       desc: "Physics-defying magic visuals",
       icon: "🌌",
-      premium: true,
+      premium: false,
       category: "premium",
       previewVideo: "/previews_video/surreal.mp4",
     },
@@ -690,7 +692,37 @@ const GenerateAdContent = () => {
         <div className="space-y-4">
           {/* Product Images - Always Visible */}
           <Card className="p-6">
-            <Label className="text-lg mb-4 block">Product Photos *</Label>
+            <div className="flex items-start justify-between mb-4">
+              <Label className="text-lg">Product Photos *</Label>
+              {productImages.length > 0 && productImages.length < 4 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20">
+                  <Lightbulb className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-blue-600">
+                    Add more angles for better results
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Tip Box */}
+            {productImages.length === 0 && (
+              <div className="mb-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <Camera className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      💡 Pro Tip: Upload 3-5 photos for best results
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Include different angles: front view, side view, close-up
+                      details, lifestyle shots, packaging. More variety = better
+                      AI-generated videos!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {productImages.map((image, index) => (
                 <div key={index} className="relative group aspect-square">
@@ -715,7 +747,9 @@ const GenerateAdContent = () => {
                   ) : (
                     <>
                       <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                      <p className="text-xs text-center">Upload</p>
+                      <p className="text-xs text-center px-2">
+                        {productImages.length === 0 ? "Add photos" : "Add more"}
+                      </p>
                     </>
                   )}
                   <input
@@ -729,6 +763,14 @@ const GenerateAdContent = () => {
                 </label>
               )}
             </div>
+
+            {/* Bottom hint */}
+            {productImages.length > 0 && productImages.length < MAX_IMAGES && (
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                {productImages.length}/{MAX_IMAGES} photos • More angles =
+                Better AI results
+              </p>
+            )}
           </Card>
 
           {/* Video Styles - Always Visible & Prominent */}

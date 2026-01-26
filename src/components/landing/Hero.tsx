@@ -283,9 +283,8 @@ export const Hero = () => {
           </h1>
 
           <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Transform product photos into stunning video ads with multiple
-            creative styles. Auto-post to TikTok & YouTube, ready-to-go content
-            for Facebook & Instagram.
+            Turn Photos into Viral Video Ads. Automate TikTok & YouTube. Get
+            ready-to-post assets for everywhere else.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">

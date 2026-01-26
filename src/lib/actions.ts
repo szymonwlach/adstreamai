@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { projectsTable, usersTable } from "@/db/schema";
 import { UUID } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 interface AddUser {
   id: UUID;
@@ -61,4 +61,24 @@ export async function getPlan(user_id: string) {
     .where(eq(usersTable.id, user_id));
 
   return result[0]?.plan || "free";
+}
+export async function DeleteProject(projectId: string, userId: string) {
+  try {
+    const deleted = await db
+      .delete(projectsTable)
+      .where(
+        and(eq(projectsTable.id, projectId), eq(projectsTable.user_id, userId)),
+      )
+      .returning();
+
+    if (!deleted || deleted.length === 0) {
+      throw new Error("Project not found or unauthorized");
+    }
+
+    console.log("✅ Project deleted:", deleted[0].id);
+    return deleted[0];
+  } catch (error: any) {
+    console.error("❌ Delete error:", error);
+    throw error;
+  }
 }

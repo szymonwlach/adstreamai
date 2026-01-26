@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 
 export const CTA = () => {
   return (
@@ -28,20 +28,19 @@ export const CTA = () => {
               size="lg"
               className="group bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-10 py-7 rounded-xl font-semibold shadow-lg glow-primary transition-all"
             >
-              Start Free Trial
+              Start Creating Ads
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg px-10 py-7 rounded-xl font-semibold border-border/50 hover:border-primary/50 backdrop-blur-sm"
-              onClick={() =>
-                (window.location.href =
-                  "mailto:contact@adstreamai.com?subject=Schedule a Demo")
-              }
-            >
-              Schedule a Demo
-            </Button>
+            <a href="#showcase">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-lg px-10 py-7 rounded-xl font-semibold border-border/50 hover:border-primary/50 backdrop-blur-sm"
+              >
+                <Play className="mr-2 h-5 w-5" />
+                Watch Demo
+              </Button>
+            </a>
           </div>
 
           <div className="pt-8 grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
