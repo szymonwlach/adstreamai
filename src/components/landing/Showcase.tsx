@@ -304,8 +304,11 @@ import {
 const AdTransformationShowcase = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const [videoLoading, setVideoLoading] = useState(true);
+  const [showPoster, setShowPoster] = useState(true);
   const videoRef = useRef(null);
   const sectionRef = useRef(null);
+  const preloadRefs = useRef({});
 
   // Tylko style które mamy w demo
   const availableStyles = [
@@ -331,94 +334,6 @@ const AdTransformationShowcase = () => {
       color: "from-yellow-500 to-amber-500",
     },
   ];
-
-  // Wszystkie 12 stylów do pokazania w gridzie
-  // const allStyles = [
-  //   {
-  //     id: "ugc",
-  //     name: "UGC",
-  //     icon: Camera,
-  //     description: "Authentic & Relatable",
-  //     available: true,
-  //   },
-  //   {
-  //     id: "trend",
-  //     name: "Trending",
-  //     icon: TrendingUp,
-  //     description: "Viral & Dynamic",
-  //     available: true,
-  //   },
-  //   {
-  //     id: "cinematic_luxury",
-  //     name: "Luxury",
-  //     icon: Crown,
-  //     description: "Premium & Elegant",
-  //     available: true,
-  //   },
-  //   {
-  //     id: "product_showcase",
-  //     name: "Product Focus",
-  //     icon: Zap,
-  //     description: "Clean & Direct",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "stop_motion",
-  //     name: "Stop Motion",
-  //     icon: Film,
-  //     description: "Creative Animation",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "before_after",
-  //     name: "Before/After",
-  //     icon: RotateCcw,
-  //     description: "Transformation",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "educational",
-  //     name: "Educational",
-  //     icon: BookOpen,
-  //     description: "Informative",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "lifestyle",
-  //     name: "Lifestyle",
-  //     icon: Coffee,
-  //     description: "Natural Use",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "unboxing",
-  //     name: "Unboxing",
-  //     icon: Gift,
-  //     description: "Discovery Moment",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "asmr",
-  //     name: "ASMR",
-  //     icon: Eye,
-  //     description: "Macro & Textures",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "cyber_glitch",
-  //     name: "Cyber",
-  //     icon: Cpu,
-  //     description: "Futuristic Vibe",
-  //     available: false,
-  //   },
-  //   {
-  //     id: "surreal_abstract",
-  //     name: "Surreal",
-  //     icon: Wand2,
-  //     description: "Impossible Physics",
-  //     available: false,
-  //   },
-  // ];
 
   const demos = [
     {
@@ -462,6 +377,40 @@ const AdTransformationShowcase = () => {
 
   const currentDemo = demos[currentIndex];
 
+  // Preload kolejnych filmów w tle
+  useEffect(() => {
+    const preloadNext = () => {
+      // Ładuj 2 następne filmy
+      for (let i = 1; i <= 2; i++) {
+        const nextIndex = (currentIndex + i) % demos.length;
+        const nextDemo = demos[nextIndex];
+
+        if (!preloadRefs.current[nextIndex]) {
+          const video = document.createElement("video");
+          video.preload = "auto";
+          video.src = nextDemo.videoFile;
+          video.muted = true;
+          video.style.display = "none";
+          document.body.appendChild(video);
+          preloadRefs.current[nextIndex] = video;
+        }
+      }
+    };
+
+    preloadNext();
+
+    return () => {
+      // Cleanup - usuń stare preloady
+      Object.keys(preloadRefs.current).forEach((key) => {
+        const index = parseInt(key);
+        if (Math.abs(index - currentIndex) > 2) {
+          preloadRefs.current[index]?.remove();
+          delete preloadRefs.current[index];
+        }
+      });
+    };
+  }, [currentIndex]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -493,12 +442,27 @@ const AdTransformationShowcase = () => {
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.load();
+      setVideoLoading(true);
+      setShowPoster(true);
+
+      const video = videoRef.current;
+      video.load();
       setIsMuted(true);
-      videoRef.current.muted = true;
-      setTimeout(() => {
-        videoRef.current?.play().catch(() => {});
-      }, 50);
+      video.muted = true;
+
+      const handleCanPlay = () => {
+        setVideoLoading(false);
+        setTimeout(() => {
+          setShowPoster(false);
+          video.play().catch(() => {});
+        }, 100);
+      };
+
+      video.addEventListener("canplay", handleCanPlay);
+
+      return () => {
+        video.removeEventListener("canplay", handleCanPlay);
+      };
     }
   }, [currentIndex]);
 
@@ -682,13 +646,36 @@ const AdTransformationShowcase = () => {
                     <div className="absolute -inset-2 bg-gradient-to-br from-accent/20 to-primary/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
                     <div className="relative bg-background/50 backdrop-blur-sm rounded-3xl p-4 sm:p-6 border border-border shadow-2xl">
                       <div className="relative w-full max-w-[450px] mx-auto aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-2xl">
+                        {/* Poster image - pokazuje się podczas ładowania */}
+                        {showPoster && (
+                          <div className="absolute inset-0 z-10 bg-black flex items-center justify-center transition-opacity duration-300">
+                            <img
+                              src={currentDemo.beforeImage}
+                              alt={currentDemo.title}
+                              className="w-full h-full object-cover"
+                            />
+                            {videoLoading && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                                <div className="flex flex-col items-center gap-3">
+                                  <RotateCcw className="w-8 h-8 text-white animate-spin" />
+                                  <span className="text-white text-sm font-medium">
+                                    Loading video...
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         <video
                           ref={videoRef}
                           key={currentDemo.id}
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover transition-opacity duration-500 ${showPoster ? "opacity-0" : "opacity-100"}`}
                           loop
                           playsInline
                           muted={isMuted}
+                          preload="auto"
+                          poster={currentDemo.beforeImage}
                         >
                           <source
                             src={currentDemo.videoFile}
@@ -750,72 +737,6 @@ const AdTransformationShowcase = () => {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* All 12 Styles Grid */}
-        <div className="mt-24 sm:mt-32 max-w-6xl mx-auto">
-          {/* <div className="text-center mb-12">
-            <h3 className="text-3xl sm:text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-                12 Styles, Infinite Reach
-              </span>
-            </h3>
-            <p className="text-muted-foreground text-lg">
-              Every style optimized for maximum engagement
-            </p>
-          </div> */}
-
-          {/* <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {allStyles.map((style) => {
-              const Icon = style.icon;
-              return (
-                <button
-                  key={style.id}
-                  onClick={() => style.available && goToStyleDemo(style.id)}
-                  disabled={!style.available}
-                  className={`group relative p-6 rounded-2xl bg-background/50 backdrop-blur-sm border transition-all duration-300 ${
-                    style.available
-                      ? "border-border hover:border-primary/50 hover:scale-105 hover:shadow-xl hover:shadow-primary/20 cursor-pointer"
-                      : "border-border/50 opacity-60 cursor-not-allowed"
-                  }`}
-                >
-                  {style.available && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                  )}
-                  <div className="relative">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-transform ${
-                        style.available
-                          ? "bg-gradient-to-br from-primary/20 to-accent/20 group-hover:scale-110"
-                          : "bg-muted/30"
-                      }`}
-                    >
-                      <Icon
-                        className={`w-6 h-6 ${style.available ? "text-primary" : "text-muted-foreground"}`}
-                      />
-                    </div>
-                    <h4 className="font-bold text-foreground mb-1">
-                      {style.name}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      {style.description}
-                    </p>
-                    {style.available ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/20 text-green-600 text-xs font-medium">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Preview
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted/50 text-muted-foreground text-xs font-medium">
-                        <Sparkles className="w-3 h-3" />
-                        Coming Soon
-                      </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div> */}
         </div>
 
         {/* Value Props */}
