@@ -295,8 +295,17 @@ const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({
             <p className="leading-relaxed">
               While our AI technology strives for quality, we do not guarantee
               the accuracy, appropriateness, or effectiveness of AI-generated
-              content. You are responsible for reviewing and approving all
-              content before distribution.
+              content.{" "}
+              <strong>
+                You acknowledge that AI models may produce unpredictable
+                results, including visual artifacts, "hallucinations," or
+                illogical representations.
+              </strong>{" "}
+              You are responsible for reviewing and approving all content before
+              distribution.
+              {companyName} is not liable for any reputational or financial
+              damage caused by the publication of unvetted AI-generated
+              material.
             </p>
 
             <h3 className="text-xl font-medium text-white mt-6 mb-3">
