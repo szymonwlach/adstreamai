@@ -1,6 +1,6 @@
 # 🎬 AdStream – AI Shorts SaaS Platform
 
-**AdStream** is a professional, production-ready SaaS platform that automates the creation of short-form video content (Shorts, Reels, TikTok) using state-of-the-art AI. Turn ideas into viral videos in seconds.
+**AdStream** is a professional, production-ready SaaS platform that automates the creation of short-form video content (Shorts, Reels, TikTok) using state-of-the-art AI. It transforms static images and form selections into viral videos.
 
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
 ![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase)
@@ -14,20 +14,30 @@
 
 AdStream leverages a powerful combination of tools to deliver high-quality automation:
 
-- **Sora 2 Pro**: Cinematic-grade video generation.
-- **GPT-4o**: Intelligent scriptwriting and workflow orchestration.
-- **n8n**: The automation "brain" connecting AI models with the application logic.
+- **Sora 2 Pro**: Cinematic-grade image-to-video generation.
+- **GPT-4o**: Intelligent orchestration and metadata generation.
+- **n8n**: The automation "brain" connecting the form data with AI models.
 
 ---
 
 ## 🔥 Key Features
 
-- **AI Video Generation**: Full automation from text prompt to rendered video.
+- **Visual Generation Engine**: Create videos by simply uploading an image and selecting options from a tailored form.
+- **Smart Form UI**: User-friendly interface built with **shadcn/ui** for picking video styles, tones, and formats.
 - **Monetization**: Integrated **Stripe** for subscriptions and credit-based systems.
-- **Enterprise UI**: Beautifully crafted components using **shadcn/ui** and **Tailwind CSS**.
-- **Automated Workflows**: Advanced **n8n** pipelines for content processing.
+- **Automated Workflows**: Advanced **n8n** pipelines that handle the heavy lifting of video processing.
 - **Secure Auth**: User onboarding and management via **Supabase Auth**.
-- **Database & Storage**: Reliable PostgreSQL hosting and asset storage on **Supabase**.
+- **Cloud Asset Management**: Reliable storage for your generated shorts on **Supabase Storage**.
+
+---
+
+## ⚙️ How It Works (The Workflow)
+
+1.  **Subscription**: User selects a plan via **Stripe**.
+2.  **Configuration**: User uploads at least one image and selects video parameters (style, duration, etc.) through a structured form.
+3.  **Automation**: **Next.js** triggers an **n8n** webhook, passing the image and form data.
+4.  **AI Generation**: **n8n** orchestrates **Sora 2 Pro** to animate the image and **GPT-4o** to refine the context.
+5.  **Delivery**: The final AI Short is rendered, stored in **Supabase**, and displayed in the user dashboard.
 
 ---
 
@@ -45,15 +55,6 @@ AdStream leverages a powerful combination of tools to deliver high-quality autom
 - **Supabase** – Database (PostgreSQL), Auth, and Storage.
 - **Stripe** – Payment processing and subscription management.
 - **n8n** – Workflow automation engine.
-
----
-
-## ⚙️ Workflow Architecture
-
-1.  **User Action**: User selects a plan (Stripe) and enters a prompt.
-2.  **Request**: Next.js triggers an **n8n** webhook.
-3.  **Generation**: n8n calls **GPT-4o** for the script and **Sora 2 Pro** for the visuals.
-4.  **Completion**: The video is stored in Supabase, and the user's credit balance is updated.
 
 ---
 
