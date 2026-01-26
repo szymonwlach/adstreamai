@@ -248,7 +248,7 @@ import Image from "next/image";
 
 export const Hero = () => {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[70vh] md:min-h-[85vh] lg:min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background with gradient overlay */}
       <div className="absolute inset-0 z-0">
         <Image

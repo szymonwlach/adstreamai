@@ -17,7 +17,7 @@ export default function HomePage() {
       <div className="">
         <Hero />
       </div>
-      <div className="-mt-28" id="showcase">
+      <div className="mt-0" id="showcase">
         <AdTransformationShowcase />
       </div>
 
@@ -25,9 +25,6 @@ export default function HomePage() {
       <div id="features">
         <Features />
       </div>
-      {/* <div id="platforms">
-        <Platforms />
-      </div> */}
       <Pricing />
       <CTA />
       <div id="footer">

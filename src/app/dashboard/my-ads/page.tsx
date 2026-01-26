@@ -405,12 +405,12 @@ const MyContent = () => {
     const interval = setInterval(updateProgress, 1000);
     return () => clearInterval(interval);
   }, [campaigns]);
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchCampaigns(false);
-    setTimeout(() => setIsRefreshing(false), 500);
-    toast.success("Content refreshed!");
-  };
+  // const handleManualRefresh = async () => {
+  //   setIsRefreshing(true);
+  //   await fetchCampaigns(false);
+  //   setTimeout(() => setIsRefreshing(false), 500);
+  //   toast.success("Content refreshed!");
+  // };
 
   useEffect(() => {
     fetchConnectedPlatforms();
@@ -630,7 +630,7 @@ const MyContent = () => {
       <DashboardNavbar />
 
       {/* Manual Refresh Button - Fixed Position */}
-      <button
+      {/* <button
         onClick={handleManualRefresh}
         disabled={isRefreshing}
         className="fixed right-8 top-28 z-50 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold border-2 border-cyan-400/30 hover:border-cyan-300/50 hover:scale-105 active:scale-95"
@@ -640,7 +640,7 @@ const MyContent = () => {
           className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
         />
         <span className="hidden sm:inline">Refresh</span>
-      </button>
+      </button> */}
 
       <div className="container mx-auto px-4 py-8 pb-20">
         {/* Global Error Banner */}
@@ -708,34 +708,46 @@ const MyContent = () => {
             </div>
           </div>
         )}
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">My Campaigns</h1>
-            <p className="text-gray-400">
-              Manage your product campaigns and AI-generated videos
-            </p>
+        {/* Header - simplified on mobile */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                My Campaigns
+              </h1>
+              <p className="text-gray-400 text-sm md:text-base">
+                Manage your campaigns and videos
+              </p>
+            </div>
+            {/* Desktop button */}
+            <Button
+              onClick={() => router.push("/dashboard/generate-ad")}
+              className="hidden md:flex gap-2 bg-cyan-500 hover:bg-cyan-600"
+              size="lg"
+            >
+              <Plus className="w-5 h-5" />
+              New Campaign
+            </Button>
           </div>
-          <Button
-            onClick={() => router.push("/dashboard/generate-ad")}
-            className="gap-2 bg-cyan-500 hover:bg-cyan-600"
-            size="lg"
-          >
-            <Plus className="w-5 h-5" />
-            New Campaign
-          </Button>
         </div>
 
+        {/* Mobile FAB - na końcu pliku, przed closing </div> */}
+        <button
+          onClick={() => router.push("/dashboard/generate-ad")}
+          className="md:hidden fixed bottom-6 right-6 z-50 bg-cyan-500 hover:bg-cyan-600 text-white p-4 rounded-full shadow-2xl"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 p-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 p-3 md:p-6">
             <div className="flex items-center gap-4">
-              <div className="bg-blue-500 p-3 rounded-lg">
-                <Archive className="w-6 h-6 text-white" />
+              <div className="bg-blue-500 p-2 md:p-3 rounded-lg">
+                <Archive className="w-5 h-5 md:w-6 md:h-6 text-white" />
               </div>
               <div>
-                <p className="text-blue-200 text-sm">Total Campaigns</p>
-                <p className="text-3xl font-bold text-white">
+                <p className="text-blue-200 text-xs md:text-sm">Campaigns</p>
+                <p className="text-2xl md:text-3xl font-bold text-white">
                   {campaigns.length}
                 </p>
               </div>
@@ -1549,11 +1561,19 @@ const MyContent = () => {
           onClick={() => setPreviewVideo(null)}
         >
           <div
-            className="bg-gray-900 rounded-2xl max-w-md w-full overflow-hidden"
+            className="bg-gray-900 rounded-2xl max-w-md w-full overflow-hidden relative"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* SINGLE X BUTTON - outside the header, fixed to modal */}
+            <button
+              onClick={() => setPreviewVideo(null)}
+              className="absolute top-3 right-3 z-50 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             <div className="p-4 border-b border-gray-700">
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-start justify-between mb-2 pr-8">
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white">
                     {previewVideo.productName}
@@ -1573,12 +1593,6 @@ const MyContent = () => {
                   </Badge>
                 )}
               </div>
-              <button
-                onClick={() => setPreviewVideo(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
             </div>
 
             <div className="aspect-[9/16] bg-black relative">
@@ -1649,7 +1663,6 @@ const MyContent = () => {
           </div>
         </div>
       )}
-
       {/* Caption Editor Modal */}
       {showCaptionModal && selectedVideoForCaption && (
         <CaptionEditorModal

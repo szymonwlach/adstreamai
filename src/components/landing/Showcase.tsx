@@ -299,7 +299,7 @@ const AdTransformationShowcase = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [videoLoading, setVideoLoading] = useState(true);
   const [showPoster, setShowPoster] = useState(true);
-  const [showMetrics, setShowMetrics] = useState(true);
+  const [showMetrics, setShowMetrics] = useState(false);
   const videoRef = useRef(null);
   const sectionRef = useRef(null);
   const preloadRefs = useRef({});
@@ -486,7 +486,7 @@ const AdTransformationShowcase = () => {
   return (
     <section
       ref={sectionRef}
-      className="relative py-12 sm:py-20 lg:py-32 overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background"
+      className="relative py-16 sm:py-20 lg:py-32 overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background"
     >
       {/* Animated background effects */}
       <div className="absolute inset-0 overflow-hidden">
@@ -501,8 +501,8 @@ const AdTransformationShowcase = () => {
       </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12 lg:mb-16 space-y-3 sm:space-y-4 lg:space-y-6">
+        {/* Header - Desktop only */}
+        <div className="hidden lg:block text-center max-w-4xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-4 lg:space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
             <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary animate-pulse" />
             <span className="text-xs sm:text-sm font-semibold text-primary">
@@ -524,8 +524,8 @@ const AdTransformationShowcase = () => {
           </p>
         </div>
 
-        {/* Social Proof Bar */}
-        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 lg:gap-12 mb-8 sm:mb-12 lg:mb-16 text-sm px-4">
+        {/* Social Proof Bar - Desktop only */}
+        <div className="hidden lg:flex flex-wrap justify-center items-center gap-4 sm:gap-6 lg:gap-12 mb-8 sm:mb-12 lg:mb-16 text-sm px-4">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             <span className="text-muted-foreground text-xs sm:text-sm">
@@ -549,6 +549,24 @@ const AdTransformationShowcase = () => {
         {/* Main Showcase */}
         <div className="max-w-7xl mx-auto">
           <div className="relative">
+            {/* Navigation Arrows - Mobile at TOP, Desktop on sides */}
+            <div className="flex lg:hidden justify-center gap-4 mb-8">
+              <button
+                onClick={prevDemo}
+                className="p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-lg active:scale-95 transition-all"
+                aria-label="Previous"
+              >
+                <ChevronLeft className="w-6 h-6 text-foreground" />
+              </button>
+              <button
+                onClick={nextDemo}
+                className="p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-lg active:scale-95 transition-all"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-6 h-6 text-foreground" />
+              </button>
+            </div>
+
             {/* Navigation - Desktop only */}
             <button
               onClick={prevDemo}
@@ -566,56 +584,16 @@ const AdTransformationShowcase = () => {
             </button>
 
             <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
-              {/* Before */}
-              <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-primary/20 to-transparent rounded-3xl blur-2xl opacity-50" />
-                <div className="relative">
-                  <div className="mb-4 sm:mb-6 text-center lg:text-left">
-                    <p className="text-xs sm:text-sm font-semibold text-primary uppercase tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                      Step 1: Upload
-                    </p>
-                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-                      {currentDemo.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                      {currentDemo.industry}
-                    </p>
-                  </div>
-
-                  <div className="relative group">
-                    <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl sm:rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
-                    <div className="relative bg-background/50 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-6 border border-border shadow-2xl">
-                      <div className="relative w-full max-w-[400px] lg:max-w-[450px] mx-auto aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-muted/30">
-                        <img
-                          src={currentDemo.beforeImage}
-                          alt={currentDemo.title}
-                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-black/80 backdrop-blur-sm text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                          Just one photo needed ✨
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* After */}
+              {/* Video - Order 1 on mobile, Order 2 on desktop */}
               <div className="relative order-1 lg:order-2">
                 <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-accent/30 to-primary/30 rounded-3xl blur-2xl opacity-50" />
                 <div className="relative">
-                  <div className="mb-4 sm:mb-6 text-center lg:text-left">
-                    <p className="text-xs sm:text-sm font-semibold text-accent uppercase tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-2">
-                      <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                      Step 2: AI Magic
-                    </p>
+                  {/* Title - Desktop only */}
+                  <div className="hidden lg:block mb-4 sm:mb-6">
                     <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                       Ready in &lt;4 Minutes
                     </h3>
-                    <div className="flex items-center gap-2 mt-2 justify-center lg:justify-start">
+                    <div className="flex items-center gap-2 mt-2">
                       {(() => {
                         const styleInfo = getStyleInfo(currentDemo.style);
                         const Icon = styleInfo.icon;
@@ -672,9 +650,9 @@ const AdTransformationShowcase = () => {
                           />
                         </video>
 
-                        {/* Metrics overlay - Always visible */}
+                        {/* Metrics overlay - hidden on mobile by default, visible on desktop hover */}
                         <div
-                          className={`absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col gap-1.5 sm:gap-2 transition-opacity duration-300 ${showMetrics ? "opacity-100" : "opacity-0 lg:opacity-0 lg:group-hover:opacity-100"}`}
+                          className={`absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col gap-1.5 sm:gap-2 transition-opacity duration-300 ${showMetrics ? "opacity-100" : "opacity-0"} lg:opacity-0 lg:group-hover:opacity-100`}
                         >
                           <div className="px-2 py-1 sm:px-3 sm:py-2 rounded-md sm:rounded-lg bg-gradient-to-r from-green-500/90 to-emerald-500/90 backdrop-blur-md text-xs sm:text-sm text-white font-bold inline-flex items-center gap-1.5 sm:gap-2 w-fit shadow-lg">
                             <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -697,7 +675,7 @@ const AdTransformationShowcase = () => {
                         {/* Toggle metrics button - Mobile only */}
                         <button
                           onClick={() => setShowMetrics(!showMetrics)}
-                          className="lg:hidden absolute top-2 sm:top-4 right-2 sm:right-4 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-xs font-semibold z-10"
+                          className="lg:hidden absolute top-2 sm:top-4 right-2 sm:right-4 p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg text-xs font-semibold z-20"
                         >
                           {showMetrics ? "📊" : "👁️"}
                         </button>
@@ -718,28 +696,45 @@ const AdTransformationShowcase = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Mobile Navigation Buttons */}
-            <div className="flex lg:hidden justify-center gap-4 mt-6">
-              <button
-                onClick={prevDemo}
-                className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-lg active:scale-95 transition-all"
-                aria-label="Previous"
-              >
-                <ChevronLeft className="w-5 h-5 text-muted-foreground" />
-              </button>
-              <button
-                onClick={nextDemo}
-                className="p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-lg active:scale-95 transition-all"
-                aria-label="Next"
-              >
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
+              {/* Photo - Order 2 on mobile, Order 1 on desktop */}
+              <div className="relative order-2 lg:order-1">
+                <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-primary/20 to-transparent rounded-3xl blur-2xl opacity-50" />
+                <div className="relative">
+                  {/* Title - Desktop only */}
+                  <div className="hidden lg:block mb-4 sm:mb-6">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+                      {currentDemo.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      {currentDemo.industry}
+                    </p>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="absolute -inset-1 sm:-inset-2 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl sm:rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500" />
+                    <div className="relative bg-background/50 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-6 border border-border shadow-2xl">
+                      <div className="relative w-full max-w-[400px] lg:max-w-[450px] mx-auto aspect-square rounded-xl sm:rounded-2xl overflow-hidden bg-muted/30">
+                        <img
+                          src={currentDemo.beforeImage}
+                          alt={currentDemo.title}
+                          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                        {/* Product Photo badge - always visible on mobile, on hover on desktop */}
+                        <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-black/80 backdrop-blur-sm text-xs text-white lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          📸 Product Photo
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Dots */}
-            <div className="flex justify-center gap-1.5 sm:gap-2 mt-6 sm:mt-8 lg:mt-12">
+            <div className="flex justify-center gap-2 mt-10 sm:mt-12 lg:mt-12">
               {demos.map((demo, index) => (
                 <button
                   key={demo.id}
@@ -752,6 +747,83 @@ const AdTransformationShowcase = () => {
                   aria-label={`View ${demo.title}`}
                 />
               ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Header - Mobile only (after visuals) */}
+        <div className="lg:hidden text-center max-w-4xl mx-auto mt-12 mb-10 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
+            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary animate-pulse" />
+            <span className="text-xs sm:text-sm font-semibold text-primary">
+              AI-Powered Transformation
+            </span>
+          </div>
+
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight px-4">
+            <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+              One Photo.
+            </span>
+            <br />
+            <span className="text-foreground">Infinite Possibilities.</span>
+          </h2>
+
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto px-4">
+            Transform your product into high-converting ads in under 4 minutes.
+            Choose from 12 proven styles that drive real results.
+          </p>
+        </div>
+
+        {/* Social Proof Bar - Mobile only */}
+        <div className="lg:hidden flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 mb-8 text-sm px-4">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Under 4 min creation
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              12 unique styles
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+            <span className="text-muted-foreground text-xs sm:text-sm">
+              Cinema-quality HD
+            </span>
+          </div>
+        </div>
+
+        {/* Demo Info - Mobile only */}
+        <div className="lg:hidden text-center space-y-6 mt-8 mb-8">
+          <div>
+            <h3 className="text-xl font-bold text-foreground">
+              {currentDemo.title}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {currentDemo.industry}
+            </p>
+          </div>
+
+          <div>
+            <h3 className="text-xl font-bold text-foreground mb-2">
+              Ready in &lt;4 Minutes
+            </h3>
+            <div className="flex items-center gap-2 justify-center">
+              {(() => {
+                const styleInfo = getStyleInfo(currentDemo.style);
+                const Icon = styleInfo.icon;
+                return (
+                  <>
+                    <Icon className="w-4 h-4 text-accent" />
+                    <p className="text-sm text-accent">
+                      {styleInfo.name} Style
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
