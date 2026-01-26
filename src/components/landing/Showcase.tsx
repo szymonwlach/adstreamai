@@ -338,11 +338,11 @@ const AdTransformationShowcase = () => {
   const demos = [
     {
       id: 0,
-      title: "Skin Care Serum",
-      style: "ugc",
-      industry: "Beauty",
-      beforeImage: "/previews_photo/skincare.png",
-      videoFile: "/previews_video/skin_care2.mp4",
+      title: "Electrolyte Hydration Drink",
+      style: "Cyber Glitch 3D",
+      industry: "Beverage",
+      beforeImage: "/previews_photo/cyber_glitch.jpg",
+      videoFile: "/previews_video/cyber_glitch.mp4",
       metrics: { engagement: "87%", ctr: "7.2%", conversions: "+280%" },
     },
     {
@@ -354,9 +354,18 @@ const AdTransformationShowcase = () => {
       videoFile: "/previews_video/trend2.mp4",
       metrics: { engagement: "94%", ctr: "9.1%", conversions: "+390%" },
     },
-
     {
       id: 2,
+      title: "Skin Care Serum",
+      style: "ugc",
+      industry: "Beauty",
+      beforeImage: "/previews_photo/skincare.png",
+      videoFile: "/previews_video/skin_care2.mp4",
+      metrics: { engagement: "87%", ctr: "7.2%", conversions: "+280%" },
+    },
+
+    {
+      id: 3,
       title: "Luxury Watch",
       style: "cinematic_luxury",
       industry: "E-commerce",
@@ -365,7 +374,7 @@ const AdTransformationShowcase = () => {
       metrics: { engagement: "92%", ctr: "8.4%", conversions: "+340%" },
     },
     {
-      id: 3,
+      id: 4,
       title: "Face Cream",
       style: "trend",
       industry: "Wellness",
