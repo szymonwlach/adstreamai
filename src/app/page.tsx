@@ -14,13 +14,13 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       {/* <ComingSoon /> */}
-      <div className="">
-        <Hero />
-      </div>
+
       <div className="mt-0" id="showcase">
         <AdTransformationShowcase />
       </div>
-
+      <div className="">
+        <Hero />
+      </div>
       <HowItWorks />
       <div id="features">
         <Features />
