@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎬 AdStream – AI Shorts SaaS Platform
 
-## Getting Started
+**AdStream** is a professional, production-ready SaaS platform that automates the creation of short-form video content (Shorts, Reels, TikTok) using state-of-the-art AI. Turn ideas into viral videos in seconds.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase)
+![Stripe](https://img.shields.io/badge/Stripe-Payments-008cdd?style=for-the-badge&logo=stripe)
+![n8n](https://img.shields.io/badge/n8n-Workflow_Automation-FF6D5A?style=for-the-badge&logo=n8n)
+![shadcn/ui](https://img.shields.io/badge/shadcn/ui-Components-000000?style=for-the-badge&logo=shadcnui)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 AI Engine & Integration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+AdStream leverages a powerful combination of tools to deliver high-quality automation:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Sora 2 Pro**: Cinematic-grade video generation.
+- **GPT-4o**: Intelligent scriptwriting and workflow orchestration.
+- **n8n**: The automation "brain" connecting AI models with the application logic.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🔥 Key Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **AI Video Generation**: Full automation from text prompt to rendered video.
+- **Monetization**: Integrated **Stripe** for subscriptions and credit-based systems.
+- **Enterprise UI**: Beautifully crafted components using **shadcn/ui** and **Tailwind CSS**.
+- **Automated Workflows**: Advanced **n8n** pipelines for content processing.
+- **Secure Auth**: User onboarding and management via **Supabase Auth**.
+- **Database & Storage**: Reliable PostgreSQL hosting and asset storage on **Supabase**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 🛠 Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Frontend
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Next.js 15 (App Router)** – React framework.
+- **TypeScript** – Full type safety.
+- **shadcn/ui** – High-quality, accessible UI components.
+- **Tailwind CSS** – Utility-first styling.
+
+### Backend & Payments
+
+- **Supabase** – Database (PostgreSQL), Auth, and Storage.
+- **Stripe** – Payment processing and subscription management.
+- **n8n** – Workflow automation engine.
+
+---
+
+## ⚙️ Workflow Architecture
+
+1.  **User Action**: User selects a plan (Stripe) and enters a prompt.
+2.  **Request**: Next.js triggers an **n8n** webhook.
+3.  **Generation**: n8n calls **GPT-4o** for the script and **Sora 2 Pro** for the visuals.
+4.  **Completion**: The video is stored in Supabase, and the user's credit balance is updated.
+
+---
+
+## 🚀 Getting Started
+
+1.  **Clone the repository:**
+
+    ```bash
+    git clone [https://github.com/szymonwlach/adstream.git](https://github.com/szymonwlach/adstream.git)
+    cd adstream
+    ```
+
+2.  **Install dependencies:**
+
+    ```bash
+    npm install
+    ```
+
+3.  **Setup Environment Variables:**
+    Create a `.env.local` file:
+
+    ```env
+    NEXT_PUBLIC_SUPABASE_URL=your_url
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+    STRIPE_SECRET_KEY=your_stripe_key
+    STRIPE_WEBHOOK_SECRET=your_webhook_secret
+    N8N_WEBHOOK_URL=your_n8n_url
+    ```
+
+4.  **Run Dev Server:**
+    ```bash
+    npm run dev
+    ```
+
+---
+
+## 🤝 Contact & Author
+
+**Szymon Włach** 📧 [szymonwlach.dev@gmail.com](mailto:szymonwlach.dev@gmail.com)  
+🔗 [github.com/szymonwlach](https://github.com/szymonwlach)
