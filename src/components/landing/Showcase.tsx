@@ -504,8 +504,8 @@ const AdTransformationShowcase = () => {
       </div>
 
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header - Desktop only */}
-        <div className="hidden lg:block text-center max-w-4xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-4 lg:space-y-6">
+        {/* Header - Always on top */}
+        <div className="text-center max-w-4xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-4 lg:space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
             <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary animate-pulse" />
             <span className="text-xs sm:text-sm font-semibold text-primary">
@@ -527,8 +527,8 @@ const AdTransformationShowcase = () => {
           </p>
         </div>
 
-        {/* Social Proof Bar - Desktop only */}
-        <div className="hidden lg:flex flex-wrap justify-center items-center gap-4 sm:gap-6 lg:gap-12 mb-8 sm:mb-12 lg:mb-16 text-sm px-4">
+        {/* Social Proof Bar - Always visible */}
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 lg:gap-12 mb-8 sm:mb-12 lg:mb-16 text-sm px-4">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             <span className="text-muted-foreground text-xs sm:text-sm">
@@ -552,25 +552,7 @@ const AdTransformationShowcase = () => {
         {/* Main Showcase */}
         <div className="max-w-7xl mx-auto">
           <div className="relative">
-            {/* Navigation Arrows - Mobile at TOP, Desktop on sides */}
-            <div className="flex lg:hidden justify-center gap-4 mb-8">
-              <button
-                onClick={prevDemo}
-                className="p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-lg active:scale-95 transition-all"
-                aria-label="Previous"
-              >
-                <ChevronLeft className="w-6 h-6 text-foreground" />
-              </button>
-              <button
-                onClick={nextDemo}
-                className="p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-lg active:scale-95 transition-all"
-                aria-label="Next"
-              >
-                <ChevronRight className="w-6 h-6 text-foreground" />
-              </button>
-            </div>
-
-            {/* Navigation - Desktop only */}
+            {/* Navigation - Desktop only (on far sides) */}
             <button
               onClick={prevDemo}
               className="hidden lg:flex absolute -left-4 xl:-left-20 top-1/2 -translate-y-1/2 z-20 p-3 lg:p-4 rounded-full bg-background/80 backdrop-blur-sm border border-border hover:border-primary/50 shadow-xl hover:scale-110 transition-all group items-center justify-center"
@@ -584,6 +566,22 @@ const AdTransformationShowcase = () => {
               aria-label="Next"
             >
               <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground group-hover:text-primary" />
+            </button>
+
+            {/* Navigation - Mobile only (between video and photo) */}
+            <button
+              onClick={prevDemo}
+              className="lg:hidden absolute left-2 sm:left-4 top-[45%] sm:top-[48%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
+            </button>
+            <button
+              onClick={nextDemo}
+              className="lg:hidden absolute right-2 sm:right-4 top-[45%] sm:top-[48%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+              aria-label="Next"
+            >
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
             </button>
 
             <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
