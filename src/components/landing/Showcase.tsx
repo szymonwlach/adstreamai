@@ -417,8 +417,7 @@ const AdTransformationShowcase = () => {
           } else {
             if (videoRef.current) {
               videoRef.current.pause();
-              videoRef.current.muted = true;
-              setIsMuted(true);
+              // Don't force mute when scrolling away
             }
           }
         });
@@ -443,9 +442,14 @@ const AdTransformationShowcase = () => {
       setShowPoster(true);
 
       const video = videoRef.current;
+      const source = video.querySelector("source");
+
+      if (source) {
+        source.src = currentDemo.videoFile;
+      }
+
       video.load();
-      setIsMuted(true);
-      video.muted = true;
+      video.muted = isMuted;
 
       const handleCanPlay = () => {
         setVideoLoading(false);
@@ -461,7 +465,7 @@ const AdTransformationShowcase = () => {
         video.removeEventListener("canplay", handleCanPlay);
       };
     }
-  }, [currentIndex]);
+  }, [currentIndex, currentDemo.videoFile]);
 
   const toggleMute = () => {
     if (videoRef.current) {
@@ -635,7 +639,6 @@ const AdTransformationShowcase = () => {
 
                         <video
                           ref={videoRef}
-                          key={currentDemo.id}
                           className={`w-full h-full object-cover transition-opacity duration-500 ${showPoster ? "opacity-0" : "opacity-100"}`}
                           loop
                           playsInline
