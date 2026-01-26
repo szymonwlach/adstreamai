@@ -357,21 +357,21 @@ const AdTransformationShowcase = () => {
     },
     {
       id: 3,
-      title: "Luxury Watch",
-      style: "cinematic_luxury",
-      industry: "E-commerce",
-      beforeImage: "/previews_photo/zegarek.png",
-      videoFile: "/previews_video/luxury_watch.mp4",
-      metrics: { engagement: "92%", ctr: "8.4%", conversions: "+340%" },
-    },
-    {
-      id: 4,
       title: "Face Cream",
       style: "trend",
       industry: "Wellness",
       beforeImage: "/previews_photo/cream.png",
       videoFile: "/previews_video/trend.mp4",
       metrics: { engagement: "89%", ctr: "7.8%", conversions: "+310%" },
+    },
+    {
+      id: 4,
+      title: "Luxury Watch",
+      style: "cinematic_luxury",
+      industry: "E-commerce",
+      beforeImage: "/previews_photo/zegarek.png",
+      videoFile: "/previews_video/luxury_watch.mp4",
+      metrics: { engagement: "92%", ctr: "8.4%", conversions: "+340%" },
     },
   ];
 
@@ -832,7 +832,9 @@ const AdTransformationShowcase = () => {
         {/* CTA */}
         <div className="mt-12 sm:mt-16 lg:mt-20 text-center px-4">
           <button className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-primary to-accent text-white font-bold text-base sm:text-lg shadow-xl shadow-primary/50 hover:shadow-2xl hover:shadow-primary/60 transition-all hover:scale-105 active:scale-95">
-            <span>Start Creating Now</span>
+            <a href="/auth">
+              <span>Start Creating Now</span>
+            </a>
             <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
           </button>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-muted-foreground">
