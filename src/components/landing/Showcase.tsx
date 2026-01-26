@@ -568,25 +568,25 @@ const AdTransformationShowcase = () => {
               <ChevronRight className="w-5 h-5 lg:w-6 lg:h-6 text-muted-foreground group-hover:text-primary" />
             </button>
 
-            {/* Navigation - Mobile only (between video and photo) */}
-            <button
-              onClick={prevDemo}
-              className="lg:hidden absolute left-2 sm:left-4 top-[40%] sm:top-[43%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
-              aria-label="Previous"
-            >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
-            </button>
-            <button
-              onClick={nextDemo}
-              className="lg:hidden absolute right-2 sm:right-4 top-[40%] sm:top-[43%] z-20 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
-              aria-label="Next"
-            >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
-            </button>
-
             <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
               {/* Video - Order 1 on mobile, Order 2 on desktop */}
               <div className="relative order-1 lg:order-2">
+                {/* Mobile Navigation - Positioned relative to video container */}
+                <button
+                  onClick={prevDemo}
+                  className="lg:hidden absolute -left-2 sm:-left-4 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+                  aria-label="Previous"
+                >
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
+                </button>
+                <button
+                  onClick={nextDemo}
+                  className="lg:hidden absolute -right-2 sm:-right-4 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-background/90 backdrop-blur-sm border-2 border-primary/30 hover:border-primary shadow-xl active:scale-95 transition-all"
+                  aria-label="Next"
+                >
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
+                </button>
+
                 <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-br from-accent/30 to-primary/30 rounded-3xl blur-2xl opacity-50" />
                 <div className="relative">
                   {/* Title - Desktop only */}
