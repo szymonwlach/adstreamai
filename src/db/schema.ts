@@ -75,7 +75,7 @@ export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   plan: planEnum("plan").notNull().default("free"),
-  credits: integer("credits").notNull().default(1),
+  credits: integer("credits").notNull().default(50),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   is_active: boolean("is_active").notNull().default(true),
@@ -85,15 +85,13 @@ export const subscriptionsTable = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   user_id: uuid("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
-  plan: planEnum("plan").notNull(),
-  status: subscriptionStatusEnum("status").notNull().default("active"),
+    .references(() => usersTable.id, { onDelete: "cascade" })
+    .unique(),
   stripe_subscription_id: text("stripe_subscription_id").unique(),
   stripe_customer_id: text("stripe_customer_id"),
-  current_period_start: timestamp("current_period_start"),
-  current_period_end: timestamp("current_period_end"),
-  trial_ends_at: timestamp("trial_ends_at"),
-  cancelled_at: timestamp("cancelled_at"),
+  stripe_price_id: text("stripe_price_id"), // Dzięki temu wiemy, jaki plan doładować
+  status: subscriptionStatusEnum("status").notNull(),
+  current_period_end: timestamp("current_period_end"), // Data ważności kredytów/planu
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
