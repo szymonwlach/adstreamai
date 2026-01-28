@@ -271,12 +271,6 @@ export const Hero = () => {
       {/* Content */}
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-          <div className="inline-block">
-            <span className="px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold backdrop-blur-sm">
-              ✨ Create & Stream AI-Powered Ads
-            </span>
-          </div>
-
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
             Create & Stream Ads{" "}
             <span className="text-gradient">Across Platforms</span>

@@ -39,7 +39,7 @@ const features = [
     icon: Zap,
     title: "Lightning-Fast Creation",
     description:
-      "From product photo to published video in under 60 seconds. Create a month's worth of content in one afternoon.",
+      "From product photo to published video in under 3 minutes. Create a month's worth of content in one afternoon.",
   },
   {
     icon: Globe,

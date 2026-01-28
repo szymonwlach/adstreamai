@@ -15,10 +15,10 @@ export default function HomePage() {
       <Navbar />
       {/* <ComingSoon /> */}
 
-      <div className="mt-0" id="showcase">
+      <div className="mt-4 md:mt-0 lg:-mt-5" id="showcase">
         <AdTransformationShowcase />
       </div>
-      <div className="">
+      <div className="-mt-6 lg:-mt-24 md:-mt-10">
         <Hero />
       </div>
       <HowItWorks />

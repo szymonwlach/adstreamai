@@ -506,14 +506,14 @@ const AdTransformationShowcase = () => {
       <div className="container relative z-10 mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header - Always on top */}
         <div className="text-center max-w-4xl mx-auto mb-10 sm:mb-12 lg:mb-16 space-y-4 sm:space-y-4 lg:space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/30 backdrop-blur-sm">
-            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary animate-pulse" />
-            <span className="text-xs sm:text-sm font-semibold text-primary">
-              AI-Powered Transformation
+          <div className="inline-block">
+            <span className="px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold backdrop-blur-sm">
+              ✨ Create & Stream AI-Powered Ads
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight px-4">
+          {/* Zmiany w h2 poniżej: podbite mobile, ciaśniejszy tracking i leading */}
+          <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-7xl font-bold tracking-tighter px-4 leading-[1.1] sm:leading-tight">
             <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
               One Photo.
             </span>
@@ -521,10 +521,21 @@ const AdTransformationShowcase = () => {
             <span className="text-foreground">Infinite Possibilities.</span>
           </h2>
 
-          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto px-4">
-            Transform your product into high-converting ads in under 4 minutes.
+          <p className="text-lg sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto px-4">
+            Transform your product into high-converting ads in under 3 minutes.
             Choose from 12 proven styles that drive real results.
           </p>
+          <div className="mt-12 sm:mt-16 lg:mt-20 text-center px-4">
+            <button className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-primary to-accent text-white font-bold text-base sm:text-lg shadow-xl shadow-primary/50 hover:shadow-2xl hover:shadow-primary/60 transition-all hover:scale-105 active:scale-95">
+              <a href="/auth">
+                <span>Start Creating Now</span>
+              </a>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-muted-foreground">
+              No credit card required • 3 free ads to start
+            </p>
+          </div>
         </div>
 
         {/* Social Proof Bar - Always visible */}
@@ -532,7 +543,7 @@ const AdTransformationShowcase = () => {
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             <span className="text-muted-foreground text-xs sm:text-sm">
-              Under 4 min creation
+              Under 3 min creation
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -830,7 +841,7 @@ const AdTransformationShowcase = () => {
         </div>
 
         {/* CTA */}
-        <div className="mt-12 sm:mt-16 lg:mt-20 text-center px-4">
+        {/* <div className="mt-12 sm:mt-16 lg:mt-20 text-center px-4">
           <button className="group relative inline-flex items-center gap-2 sm:gap-3 px-6 py-3 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-primary to-accent text-white font-bold text-base sm:text-lg shadow-xl shadow-primary/50 hover:shadow-2xl hover:shadow-primary/60 transition-all hover:scale-105 active:scale-95">
             <a href="/auth">
               <span>Start Creating Now</span>
@@ -840,7 +851,7 @@ const AdTransformationShowcase = () => {
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-muted-foreground">
             No credit card required • 3 free ads to start
           </p>
-        </div>
+        </div> */}
       </div>
 
       <style jsx>{`

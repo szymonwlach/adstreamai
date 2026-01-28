@@ -16,7 +16,7 @@ const steps = [
     description:
       "Choose from UGC-style, trending, or educational formats. Get professional videos with captions for every platform in under a minute.",
     step: "02",
-    highlight: "3 video styles instantly",
+    highlight: "Choose from 12 unique styles",
   },
   {
     icon: Youtube,
