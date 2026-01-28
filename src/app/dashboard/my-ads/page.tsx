@@ -1362,12 +1362,19 @@ const MyContent = () => {
                                       loop
                                       onMouseEnter={(e) => {
                                         setHoveredVideoId(video.id);
-                                        e.currentTarget.play();
+                                        e.currentTarget.play().catch(() => {});
                                       }}
                                       onMouseLeave={(e) => {
                                         setHoveredVideoId(null);
                                         e.currentTarget.pause();
                                         e.currentTarget.currentTime = 0;
+                                      }}
+                                      onError={(e) => {
+                                        if (
+                                          e.currentTarget.error?.code === 20
+                                        ) {
+                                          e.preventDefault();
+                                        }
                                       }}
                                     />
                                   ) : (
