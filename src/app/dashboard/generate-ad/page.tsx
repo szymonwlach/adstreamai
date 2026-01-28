@@ -5,6 +5,7 @@ import React, {
   useRef,
   Suspense,
   useCallback,
+  useMemo,
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -27,6 +28,10 @@ import {
   Play,
   Camera,
   Lightbulb,
+  Monitor,
+  Clock,
+  Lock,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -44,6 +49,72 @@ import {
 import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+// ==================== CREDIT CALCULATION ====================
+const CREDIT_COSTS = {
+  "720p": {
+    10: 15,
+    15: 25,
+  },
+  "1080p": {
+    10: 75,
+    15: 135,
+  },
+  ultra: {
+    10: 160,
+    15: 300,
+  },
+} as const;
+
+type QualityType = keyof typeof CREDIT_COSTS;
+type DurationType = keyof (typeof CREDIT_COSTS)["720p"];
+
+const calculateCost = (quality: string, duration: number): number => {
+  const q = quality as QualityType;
+  const d = duration as DurationType;
+  return CREDIT_COSTS[q]?.[d] || 0;
+};
+
+// ==================== TYPES ====================
+interface UserPlan {
+  plan: "free" | "starter" | "pro" | "enterprise";
+  credits: number;
+}
+
+// ==================== QUALITY OPTIONS ====================
+const QUALITY_OPTIONS = [
+  {
+    id: "720p",
+    name: "720p HD",
+    subtitle: "Sora 2 Standard",
+    icon: Monitor,
+    locked: false,
+    badge: null,
+  },
+  {
+    id: "1080p",
+    name: "1080p Full HD",
+    subtitle: "Sora 2 Pro",
+    icon: Monitor,
+    locked: true, // Will be dynamically checked
+    badge: "PRO",
+  },
+  {
+    id: "ultra",
+    name: "Ultra 4K",
+    subtitle: "Sora 2 Pro High",
+    icon: Monitor,
+    locked: true,
+    badge: "PRO",
+  },
+];
+
+const DURATION_OPTIONS = [
+  { id: 10, label: "10 seconds", icon: Clock },
+  { id: 15, label: "15 seconds", icon: Clock, badge: "PRO" },
+];
+
+// ==================== COLLAPSIBLE SECTION ====================
 const CollapsibleSection = ({
   id,
   title,
@@ -94,6 +165,7 @@ const CollapsibleSection = ({
   );
 };
 
+// ==================== MAIN COMPONENT ====================
 const GenerateAdContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,10 +178,10 @@ const GenerateAdContent = () => {
   const [description, setDescription] = useState("");
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState("en");
-  const [selectedQuality, setSelectedQuality] = useState("720p");
-  const [selectedDuration, setSelectedDuration] = useState(10);
-  const [userCredits, setUserCredits] = useState(10);
-  const [userPlan, setUserPlan] = useState<any>(null);
+  const [selectedQuality, setSelectedQuality] = useState<QualityType>("720p");
+  const [selectedDuration, setSelectedDuration] = useState<DurationType>(10);
+  const [userCredits, setUserCredits] = useState(0);
+  const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
   const [isPrefillingFromCampaign, setIsPrefillingFromCampaign] =
     useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -121,7 +193,6 @@ const GenerateAdContent = () => {
   const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
   const [colorScheme, setColorScheme] = useState("auto");
 
-  // Collapsed sections
   const [expandedSection, setExpandedSection] = useState<string | null>(
     "styles",
   );
@@ -267,6 +338,23 @@ const GenerateAdContent = () => {
     { id: "neon", name: "Neon" },
   ];
 
+  // ==================== CREDIT CALCULATION ====================
+  const estimatedCost = useMemo(() => {
+    const costPerVideo = calculateCost(selectedQuality, selectedDuration);
+    const totalVideos = selectedStyles.length;
+    return costPerVideo * totalVideos;
+  }, [selectedQuality, selectedDuration, selectedStyles.length]);
+
+  // ==================== PLAN RESTRICTIONS ====================
+  const isFreeUser =
+    userPlan?.plan === "free" || userPlan?.plan === "starter" || !userPlan;
+  const canUse1080p = !isFreeUser;
+  const canUseUltra = !isFreeUser;
+  const canUse15sec = !isFreeUser;
+
+  const hasSubscription = userPlan?.plan && userPlan.plan !== "free";
+
+  // ==================== FETCH USER PLAN ====================
   const getPlan = async () => {
     try {
       const {
@@ -279,11 +367,13 @@ const GenerateAdContent = () => {
       });
       const user_plan = await response.json();
       setUserPlan(user_plan);
+      setUserCredits(user_plan.credits || 0);
     } catch (error) {
       console.error("Failed to get user plan", error);
     }
   };
 
+  // ==================== PREFILL FROM CAMPAIGN ====================
   useEffect(() => {
     const prefillFromCampaign = async () => {
       if (!campaignId || !shouldPrefill) return;
@@ -335,10 +425,53 @@ const GenerateAdContent = () => {
     getPlan();
   }, []);
 
-  const isFreeUser = userPlan?.plan === "free" || !userPlan || !userPlan?.plan;
-  const canUse1080p = !isFreeUser;
-  const canUse15sec = !isFreeUser && selectedQuality === "1080p";
+  // ==================== QUALITY SELECTION ====================
+  const handleQualitySelect = (qualityId: string) => {
+    if (qualityId === "1080p" && !canUse1080p) {
+      toast.warning("Premium Feature", {
+        description: "Upgrade to Pro to unlock 1080p Full HD quality!",
+        icon: <Crown className="w-5 h-5 text-amber-500" />,
+        action: {
+          label: "Upgrade",
+          onClick: () => router.push("/dashboard/billing"),
+        },
+      });
+      return;
+    }
 
+    if (qualityId === "ultra" && !canUseUltra) {
+      toast.warning("Premium Feature", {
+        description: "Upgrade to Pro to unlock Ultra 4K quality!",
+        icon: <Crown className="w-5 h-5 text-amber-500" />,
+        action: {
+          label: "Upgrade",
+          onClick: () => router.push("/#pricing"),
+        },
+      });
+      return;
+    }
+
+    setSelectedQuality(qualityId as QualityType);
+  };
+
+  // ==================== DURATION SELECTION ====================
+  const handleDurationSelect = (duration: number) => {
+    if (duration === 15 && !canUse15sec) {
+      toast.warning("Premium Feature", {
+        description: "Upgrade to Pro to unlock 15-second videos!",
+        icon: <Crown className="w-5 h-5 text-amber-500" />,
+        action: {
+          label: "Upgrade",
+          onClick: () => router.push("/dashboard/billing"),
+        },
+      });
+      return;
+    }
+
+    setSelectedDuration(duration as DurationType);
+  };
+
+  // ==================== STYLE TOGGLE ====================
   const toggleStyle = useCallback(
     (styleId: string, isPremium: boolean) => {
       if (isPremium && isFreeUser) {
@@ -347,7 +480,7 @@ const GenerateAdContent = () => {
           icon: <Crown className="w-5 h-5 text-amber-500" />,
           action: {
             label: "Upgrade",
-            onClick: () => router.push("/dashboard/pricing"),
+            onClick: () => router.push("/dashboard/billing"),
           },
         });
         return;
@@ -357,6 +490,8 @@ const GenerateAdContent = () => {
     },
     [isFreeUser, router],
   );
+
+  // ==================== IMAGE UPLOAD ====================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -423,11 +558,10 @@ const GenerateAdContent = () => {
     setProductImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const creditsNeeded = selectedStyles.length;
+  // ==================== GENERATION ====================
+  const hasEnoughCredits = userCredits >= estimatedCost;
   const canGenerate =
-    userCredits >= creditsNeeded &&
-    creditsNeeded > 0 &&
-    productImages.length > 0;
+    hasEnoughCredits && selectedStyles.length > 0 && productImages.length > 0;
 
   const handleGenerate = async () => {
     const {
@@ -449,6 +583,17 @@ const GenerateAdContent = () => {
       return;
     }
 
+    if (!hasEnoughCredits) {
+      toast.error("Insufficient Credits", {
+        description: `You need ${estimatedCost - userCredits} more credits`,
+        action: {
+          label: "Get Credits",
+          onClick: () => router.push("/dashboard/billing"),
+        },
+      });
+      return;
+    }
+
     try {
       const projectData = {
         user_id: session.user.id,
@@ -465,19 +610,15 @@ const GenerateAdContent = () => {
         music_enabled: musicEnabled,
         voiceover_enabled: voiceoverEnabled,
         color_scheme: colorScheme,
+        estimated_cost: estimatedCost,
       };
-
-      console.log("=== DEBUG ===");
-      console.log("user_id:", projectData.user_id);
-      console.log("product_url:", projectData.product_url);
-      console.log("selected_style:", projectData.selected_style);
-      console.log("Cały obiekt:", JSON.stringify(projectData, null, 2));
 
       const saveResponse = await fetch("/api/saveAd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(projectData), // Wyślij projectData, NIE cleanedData!
+        body: JSON.stringify(projectData),
       });
+
       if (!saveResponse.ok) {
         const errorData = await saveResponse.json();
         throw new Error(
@@ -488,6 +629,7 @@ const GenerateAdContent = () => {
       const { projectId, campaignId: newCampaignId } =
         await saveResponse.json();
 
+      // Send to n8n webhook
       const n8nResponse = await fetch("/api/sendToN8n", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -495,7 +637,7 @@ const GenerateAdContent = () => {
           project_id: projectId,
           campaign_id: newCampaignId,
           user_id: session.user.id,
-          plan: userPlan,
+          plan: userPlan?.plan,
           product_name: campaignName.trim() || "Untitled Campaign",
           description: description.trim() || undefined,
           product_images: productImages,
@@ -509,6 +651,7 @@ const GenerateAdContent = () => {
           subtitle_style: subtitlesEnabled ? subtitleStyle : null,
           color_scheme: subtitlesEnabled ? colorScheme : null,
           music_enabled: musicEnabled,
+          estimated_cost: estimatedCost,
         }),
       });
 
@@ -538,6 +681,8 @@ const GenerateAdContent = () => {
       toast.error("Failed to generate ads", { description: errorMessage });
     }
   };
+
+  // ==================== STYLE CARD ====================
   const StyleCard = React.memo(
     ({
       style,
@@ -661,8 +806,11 @@ const GenerateAdContent = () => {
 
         {/* Credits Bar */}
         <div className="grid md:grid-cols-2 gap-4 mb-8">
-          <Card className="p-5">
-            <div className="flex items-center gap-4">
+          <Card className="p-5 relative overflow-hidden">
+            {hasSubscription && (
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/20 to-transparent rounded-full blur-2xl animate-pulse" />
+            )}
+            <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 rounded-xl bg-primary/10">
                 <Sparkles className="w-6 h-6 text-primary" />
               </div>
@@ -690,7 +838,7 @@ const GenerateAdContent = () => {
         </div>
 
         <div className="space-y-4">
-          {/* Product Images - Always Visible */}
+          {/* Product Images */}
           <Card className="p-6">
             <div className="flex items-start justify-between mb-4">
               <Label className="text-lg">Product Photos *</Label>
@@ -704,7 +852,6 @@ const GenerateAdContent = () => {
               )}
             </div>
 
-            {/* Tip Box */}
             {productImages.length === 0 && (
               <div className="mb-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
                 <div className="flex items-start gap-3">
@@ -764,7 +911,6 @@ const GenerateAdContent = () => {
               )}
             </div>
 
-            {/* Bottom hint */}
             {productImages.length > 0 && productImages.length < MAX_IMAGES && (
               <p className="text-xs text-muted-foreground mt-3 text-center">
                 {productImages.length}/{MAX_IMAGES} photos • More angles =
@@ -773,7 +919,7 @@ const GenerateAdContent = () => {
             )}
           </Card>
 
-          {/* Video Styles - Always Visible & Prominent */}
+          {/* Video Styles */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <Label className="text-lg">Choose Video Style *</Label>
@@ -794,81 +940,128 @@ const GenerateAdContent = () => {
             </div>
           </Card>
 
-          {/* Collapsible Sections */}
+          {/* Video Settings - New Premium UI */}
           <CollapsibleSection
             id="video"
             title="Video Settings"
             icon={<Film className="w-5 h-5 text-primary" />}
-            badge={`${selectedQuality} • ${selectedDuration}s • ${
+            badge={`${selectedQuality.toUpperCase()} • ${selectedDuration}s • ${
               languages.find((l) => l.code === selectedLanguage)?.flag
             }`}
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
           >
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <Card
-                  className={`p-4 cursor-pointer ${
-                    selectedQuality === "720p" ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => setSelectedQuality("720p")}
-                >
-                  <p className="font-medium">720p HD</p>
-                  <p className="text-xs text-muted-foreground">Standard</p>
-                </Card>
-                <Card
-                  className={`p-4 ${
-                    canUse1080p
-                      ? `cursor-pointer ${
-                          selectedQuality === "1080p"
-                            ? "ring-2 ring-primary"
-                            : ""
-                        }`
-                      : "opacity-50 cursor-not-allowed"
-                  }`}
-                  onClick={() => canUse1080p && setSelectedQuality("1080p")}
-                >
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">1080p</p>
-                    {!canUse1080p && (
-                      <Crown className="w-3 h-3 text-amber-500" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">High quality</p>
-                </Card>
+            <div className="space-y-6">
+              {/* Quality Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-semibold">Video Quality</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {calculateCost(selectedQuality, selectedDuration)} credits
+                    per video
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {QUALITY_OPTIONS.map((quality) => {
+                    const isLocked =
+                      (quality.id === "1080p" && !canUse1080p) ||
+                      (quality.id === "ultra" && !canUseUltra);
+                    const isSelected = selectedQuality === quality.id;
+
+                    return (
+                      <Card
+                        key={quality.id}
+                        className={`p-4 cursor-pointer transition-all ${
+                          isLocked
+                            ? "opacity-50 cursor-not-allowed"
+                            : `hover:shadow-md ${
+                                isSelected
+                                  ? "ring-2 ring-primary bg-primary/5"
+                                  : "hover:bg-accent/50"
+                              }`
+                        }`}
+                        onClick={() => handleQualitySelect(quality.id)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <quality.icon className="w-5 h-5 text-muted-foreground" />
+                          {isLocked && (
+                            <Lock className="w-4 h-4 text-amber-500" />
+                          )}
+                          {quality.badge && !isLocked && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                              {quality.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm">{quality.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {quality.subtitle}
+                        </p>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Card
-                  className={`p-4 cursor-pointer ${
-                    selectedDuration === 10 ? "ring-2 ring-primary" : ""
-                  }`}
-                  onClick={() => setSelectedDuration(10)}
-                >
-                  <p className="font-medium">10 seconds</p>
-                </Card>
-                <Card
-                  className={`p-4 ${
-                    canUse15sec
-                      ? `cursor-pointer ${
-                          selectedDuration === 15 ? "ring-2 ring-primary" : ""
-                        }`
-                      : "opacity-50 cursor-not-allowed"
-                  }`}
-                  onClick={() => canUse15sec && setSelectedDuration(15)}
-                >
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">15 seconds</p>
-                    {!canUse15sec && (
-                      <Crown className="w-3 h-3 text-amber-500" />
-                    )}
-                  </div>
-                </Card>
+              {/* Duration Selector */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-semibold">
+                    Video Duration
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    Longer videos = More engagement
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {DURATION_OPTIONS.map((duration) => {
+                    const isLocked = duration.id === 15 && !canUse15sec;
+                    const isSelected = selectedDuration === duration.id;
+
+                    return (
+                      <Card
+                        key={duration.id}
+                        className={`p-4 cursor-pointer transition-all ${
+                          isLocked
+                            ? "opacity-50 cursor-not-allowed"
+                            : `hover:shadow-md ${
+                                isSelected
+                                  ? "ring-2 ring-primary bg-primary/5"
+                                  : "hover:bg-accent/50"
+                              }`
+                        }`}
+                        onClick={() => handleDurationSelect(duration.id)}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <duration.icon className="w-5 h-5 text-muted-foreground" />
+                          {isLocked && (
+                            <Lock className="w-4 h-4 text-amber-500" />
+                          )}
+                          {duration.badge && !isLocked && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                              {duration.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-semibold">{duration.label}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {calculateCost(
+                            selectedQuality,
+                            duration.id as DurationType,
+                          )}{" "}
+                          credits
+                        </p>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Language Selector */}
               <div>
-                <Label className="mb-2 block text-sm">Video Language</Label>
+                <Label className="mb-2 block text-sm font-semibold">
+                  Video Language
+                </Label>
                 <Select
                   value={selectedLanguage}
                   onValueChange={setSelectedLanguage}
@@ -887,6 +1080,8 @@ const GenerateAdContent = () => {
               </div>
             </div>
           </CollapsibleSection>
+
+          {/* Basic Info */}
           <CollapsibleSection
             id="basic"
             title="Basic Info (Optional)"
@@ -915,6 +1110,8 @@ const GenerateAdContent = () => {
               </div>
             </div>
           </CollapsibleSection>
+
+          {/* Style & Audio */}
           <CollapsibleSection
             id="style"
             title="Style & Audio (Optional)"
@@ -928,14 +1125,6 @@ const GenerateAdContent = () => {
             setExpandedSection={setExpandedSection}
           >
             <div className="space-y-4">
-              {/* <div className="bg-muted/30 border border-muted rounded-lg p-3 mb-4">
-                <p className="text-sm text-muted-foreground">
-                  ℹ️ These settings are optional. AI will use smart defaults if
-                  you don't customize them.
-                </p>
-              </div> */}
-
-              {/* Main Subtitles Toggle Card */}
               <Card
                 className={`p-4 cursor-pointer transition-all duration-200 ${
                   subtitlesEnabled
@@ -971,7 +1160,6 @@ const GenerateAdContent = () => {
                   />
                 </div>
 
-                {/* Expanded options - only visible when subtitlesEnabled is true */}
                 {subtitlesEnabled && (
                   <div
                     className="mt-4 pt-4 border-t grid grid-cols-2 gap-3"
@@ -1021,7 +1209,6 @@ const GenerateAdContent = () => {
                 )}
               </Card>
 
-              {/* Music Card */}
               <Card
                 className={`p-4 cursor-pointer transition-colors ${
                   musicEnabled
@@ -1065,9 +1252,8 @@ const GenerateAdContent = () => {
           </CollapsibleSection>
         </div>
 
-        {/* Generate Button - Always Visible at Bottom */}
-
-        <Card className="p-6 mt-6 bottom-4 shadow-lg border-2">
+        {/* Generate Button - Enhanced */}
+        <Card className="p-6 mt-6 shadow-lg border-2">
           <div className="flex items-center justify-between mb-4">
             <div>
               <p className="font-semibold text-lg">Ready to Generate</p>
@@ -1075,8 +1261,8 @@ const GenerateAdContent = () => {
                 {selectedStyles.length > 0 ? (
                   <>
                     Creating {selectedStyles.length} video
-                    {selectedStyles.length !== 1 ? "s" : ""} • {selectedQuality}{" "}
-                    • {selectedDuration}s
+                    {selectedStyles.length !== 1 ? "s" : ""} •{" "}
+                    {selectedQuality.toUpperCase()} • {selectedDuration}s
                   </>
                 ) : (
                   "Select at least one video style to continue"
@@ -1085,21 +1271,20 @@ const GenerateAdContent = () => {
             </div>
             <div className="flex gap-6">
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Videos</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {creditsNeeded}
+                <p className="text-sm text-muted-foreground">Total Cost</p>
+                <p className="text-2xl font-bold text-primary flex items-center gap-1">
+                  {estimatedCost}
+                  <Zap className="w-5 h-5 text-amber-500" />
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Credits</p>
+                <p className="text-sm text-muted-foreground">Your Balance</p>
                 <p
                   className={`text-2xl font-bold ${
-                    creditsNeeded > userCredits
-                      ? "text-destructive"
-                      : "text-primary"
+                    !hasEnoughCredits ? "text-destructive" : "text-green-600"
                   }`}
                 >
-                  {creditsNeeded} / {userCredits}
+                  {userCredits}
                 </p>
               </div>
             </div>
@@ -1120,16 +1305,25 @@ const GenerateAdContent = () => {
               size="lg"
             >
               <Wand2 className="w-5 h-5" />
-              Generate {creditsNeeded > 0 ? creditsNeeded : ""} Video
-              {creditsNeeded !== 1 ? "s" : ""}
+              Generate{" "}
+              {selectedStyles.length > 0 ? `(${estimatedCost} credits)` : ""}
             </Button>
           </div>
 
-          {creditsNeeded > userCredits && (
-            <p className="text-sm text-destructive text-center mt-3">
-              ⚠️ Insufficient credits - you need {creditsNeeded - userCredits}{" "}
-              more
-            </p>
+          {!hasEnoughCredits && selectedStyles.length > 0 && (
+            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive text-center font-medium">
+                ⚠️ Insufficient credits - you need {estimatedCost - userCredits}{" "}
+                more
+              </p>
+              <Button
+                variant="link"
+                className="w-full mt-2 text-destructive hover:text-destructive/80"
+                onClick={() => router.push("/dashboard/billing")}
+              >
+                Get More Credits →
+              </Button>
+            </div>
           )}
         </Card>
       </div>
