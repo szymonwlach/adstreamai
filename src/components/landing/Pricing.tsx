@@ -775,7 +775,7 @@ export const Pricing = () => {
                 anytime
               </p>
               <p className="text-sm font-semibold text-primary">
-                🎯 Join 500+ creators already creating amazing content!
+                🎯 Join 100+ creators already creating amazing content!
               </p>
             </div>
           )}

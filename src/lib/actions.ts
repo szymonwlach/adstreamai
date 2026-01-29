@@ -56,12 +56,19 @@ export async function saveAd(ad_obj: Ad) {
 
 export async function getPlan(user_id: string) {
   const result = await db
-    .select({ plan: usersTable.plan })
+    .select({
+      plan: usersTable.plan,
+      credits: usersTable.credits, // lub usersTable.credit - zależy jak nazywa się kolumna
+    })
     .from(usersTable)
     .where(eq(usersTable.id, user_id));
 
-  return result[0]?.plan || "free";
+  return {
+    plan: result[0]?.plan || "free",
+    credits: result[0]?.credits || 0, // lub result[0]?.credit
+  };
 }
+
 export async function DeleteProject(projectId: string, userId: string) {
   try {
     const deleted = await db
@@ -70,11 +77,9 @@ export async function DeleteProject(projectId: string, userId: string) {
         and(eq(projectsTable.id, projectId), eq(projectsTable.user_id, userId)),
       )
       .returning();
-
     if (!deleted || deleted.length === 0) {
       throw new Error("Project not found or unauthorized");
     }
-
     console.log("✅ Project deleted:", deleted[0].id);
     return deleted[0];
   } catch (error: any) {

@@ -169,17 +169,20 @@ export const videosTable = pgTable("videos", {
       title: string;
       text: string;
     };
-    youtube?: {
+    youtube_shorts?: {
       title: string;
       description: string;
     };
     tiktok?: {
       text: string;
     };
-    // linkedin?: {
-    //   title: string;
-    //   text: string;
-    // };
+    linkedin?: {
+      title: string;
+      text: string;
+    };
+    x?: {
+      text: string;
+    };
   }>(),
 
   metadata: jsonb("metadata"),

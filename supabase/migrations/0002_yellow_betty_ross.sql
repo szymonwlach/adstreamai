@@ -1,1 +1,0 @@
-ALTER TABLE "projects" ADD COLUMN "language" text DEFAULT 'en' NOT NULL;

@@ -14,12 +14,11 @@ export async function POST(req: NextRequest) {
       name,
       description,
       product_url,
-      selected_style,
+      selected_style, // To jest array stylów
       language,
       quality,
       duration,
       campaign_id,
-      // Nowe parametry stylu i audio
       subtitles_enabled,
       subtitle_style,
       music_enabled,
@@ -33,6 +32,7 @@ export async function POST(req: NextRequest) {
     console.log("🧹 After cleanup:");
     console.log("  Name:", name);
     console.log("  Description:", description);
+    console.log("  Selected styles:", selected_style);
 
     // Walidacja wymaganych pól
     if (
@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
           error:
             "Missing required fields: user_id, product_url, and selected_style",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    console.log("💾 Saving project with campaign support...");
+    console.log("💾 Creating projects for each style...");
 
     let campaignId: string;
 
@@ -59,7 +59,6 @@ export async function POST(req: NextRequest) {
     // ============================================
 
     if (campaign_id) {
-      // Use existing campaign (when generating more ads)
       console.log("✅ Using existing campaign:", campaign_id);
       campaignId = campaign_id;
 
@@ -93,8 +92,8 @@ export async function POST(req: NextRequest) {
             and(
               eq(campaignsTable.user_id, user_id),
               eq(campaignsTable.description, description),
-              eq(campaignsTable.product_image_url, product_url)
-            )
+              eq(campaignsTable.product_image_url, product_url),
+            ),
           )
           .limit(1);
       }
@@ -111,7 +110,6 @@ export async function POST(req: NextRequest) {
           .where(eq(campaignsTable.id, campaignId));
         console.log("✅ Using existing campaign:", campaignId);
       } else {
-        // Create new campaign
         console.log("📁 Creating new campaign...");
         const newCampaign = await db
           .insert(campaignsTable)
@@ -130,38 +128,45 @@ export async function POST(req: NextRequest) {
     }
 
     // ============================================
-    // STEP 2: Create project linked to campaign
+    // STEP 2: Create SEPARATE project for EACH style
     // ============================================
-    const newProject = await db
-      .insert(projectsTable)
-      .values({
-        user_id,
-        campaign_id: campaignId,
-        name: name,
-        description: description,
-        product_image_url: product_url,
-        selected_styles: selected_style,
-        language: language || "en",
-        status: "processing",
-        quality: quality || "720p",
-        duration: duration || 10,
-        // Dodanie nowych pól do bazy danych:
-        subtitles_enabled: subtitles_enabled ?? false,
-        subtitle_style: subtitles_enabled ? subtitle_style : null,
-        music_enabled: music_enabled ?? true,
-        color_scheme: subtitles_enabled ? color_scheme : null,
-      })
-      .returning();
+    const createdProjects = [];
 
-    console.log("✅ Project created:", newProject[0].id);
+    for (const style of selected_style) {
+      console.log(`📹 Creating project for style: ${style}`);
+
+      const newProject = await db
+        .insert(projectsTable)
+        .values({
+          user_id,
+          campaign_id: campaignId,
+          name: name,
+          description: description,
+          product_image_url: product_url,
+          selected_styles: [style], // ✅ POJEDYNCZY STYL w array
+          language: language || "en",
+          status: "processing",
+          quality: quality || "720p",
+          duration: duration || 10,
+          subtitles_enabled: subtitles_enabled ?? false,
+          subtitle_style: subtitles_enabled ? subtitle_style : null,
+          music_enabled: music_enabled ?? true,
+          color_scheme: subtitles_enabled ? color_scheme : null,
+        })
+        .returning();
+
+      createdProjects.push(newProject[0]);
+      console.log(`✅ Project created for ${style}:`, newProject[0].id);
+    }
+
     console.log("🎯 Campaign ID:", campaignId);
-    console.log("📹 Videos to generate:", selected_style.length);
+    console.log("📹 Total projects created:", createdProjects.length);
 
     return NextResponse.json({
       success: true,
-      projectId: newProject[0].id,
+      projectIds: createdProjects.map((p) => p.id), // ✅ Array wszystkich project IDs
       campaignId: campaignId,
-      message: `Created project with ${selected_style.length} video(s)`,
+      message: `Created ${createdProjects.length} project(s) with ${selected_style.length} video(s)`,
     });
   } catch (error) {
     console.error("❌ Error in saveAd:", error);
@@ -170,7 +175,7 @@ export async function POST(req: NextRequest) {
         error: "Failed to save project",
         details: error instanceof Error ? error.message : String(error),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -7,45 +7,48 @@ import {
   Zap,
   Globe,
   ArrowRight,
+  Layers,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const features = [
   {
+    icon: Layers,
+    title: "Batch Generate Multiple Styles",
+    description:
+      "Create 3, 5, or even 12 different ad variations at once. Select multiple video styles (UGC, Trend, Cinematic, etc.) and generate them all simultaneously—perfect for A/B testing.",
+    highlight: true,
+  },
+  {
+    icon: Wand2,
+    title: "12 Professional Video Styles",
+    description:
+      "From authentic UGC to cinematic luxury, ASMR to stop-motion. Mix and match styles in one batch to find what resonates with your audience.",
+  },
+  {
     icon: Sparkles,
     title: "AI Video Generation",
     description:
-      "Upload a product photo and get professional UGC ads, educational content, or trending videos in seconds. No editing skills required.",
+      "Upload product photos and get professional ads in seconds. Each style generates a completely unique video—no editing skills required.",
   },
   {
     icon: Youtube,
     title: "YouTube & TikTok Auto-Publishing",
     description:
-      "Click publish or schedule your videos directly to YouTube and TikTok. Set it once and forget it—your content goes live automatically on both platforms.",
+      "Publish or schedule all your generated videos directly to YouTube and TikTok. Set it once and forget it—your content goes live automatically.",
   },
   {
     icon: Copy,
     title: "Platform-Ready Captions",
     description:
-      "Get unique, pre-written captions with hashtags for TikTok, Instagram, Facebook, and LinkedIn. Different text for each platform—just copy and paste.",
+      "Get unique, pre-written captions with hashtags for each video and each platform. TikTok, Instagram, Facebook, LinkedIn—different text for each.",
   },
   {
     icon: Clock,
     title: "Smart Scheduling",
     description:
-      "Schedule weeks of content in minutes. Your YouTube and TikTok videos post automatically at the perfect time while you sleep.",
-  },
-  {
-    icon: Zap,
-    title: "Lightning-Fast Creation",
-    description:
-      "From product photo to published video in under 3 minutes. Create a month's worth of content in one afternoon.",
-  },
-  {
-    icon: Globe,
-    title: "Multi-Platform Strategy",
-    description:
-      "One video, multiple formats. Export optimized versions for Shorts, Reels, and TikTok with platform-specific captions included.",
+      "Schedule weeks of content in minutes. Queue up all your batch-generated videos and let them post automatically at optimal times.",
   },
 ];
 
@@ -59,12 +62,13 @@ export const Features = () => {
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-20">
           <h2 className="text-4xl sm:text-5xl font-bold mb-6 tracking-tight">
-            Stop spending hours on content.
-            <span className="text-gradient"> Start scaling.</span>
+            Create 10+ variations in one click.
+            <span className="text-gradient"> Find what converts.</span>
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed">
-            Everything you need to create, optimize, and publish video ads—with
-            YouTube automation and ready-to-use content for all other platforms.
+            Generate multiple ad styles simultaneously and auto-publish to
+            YouTube and TikTok. Get ready-to-use content for all other platforms
+            in one go.
           </p>
         </div>
 
@@ -72,11 +76,32 @@ export const Features = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto mb-20">
           {features.map((feature, index) => (
             <div key={index} className="group relative">
+              {/* Highlight badge for main feature */}
+              {feature.highlight && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
+                  <div className="px-3 py-1 rounded-full bg-gradient-to-r from-primary to-accent text-white text-xs font-bold shadow-lg">
+                    ⚡ GAME CHANGER
+                  </div>
+                </div>
+              )}
+
               {/* Card */}
-              <div className="h-full p-8 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5">
+              <div
+                className={`h-full p-8 rounded-2xl bg-card border transition-all duration-500 hover:shadow-2xl ${
+                  feature.highlight
+                    ? "border-primary/50 hover:border-primary shadow-lg shadow-primary/10"
+                    : "border-border/50 hover:border-primary/30 hover:shadow-primary/5"
+                }`}
+              >
                 {/* Icon */}
                 <div className="mb-6">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors duration-300">
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-300 ${
+                      feature.highlight
+                        ? "bg-primary/20 group-hover:bg-primary/30"
+                        : "bg-primary/10 group-hover:bg-primary/15"
+                    }`}
+                  >
                     <feature.icon className="w-6 h-6 text-primary" />
                   </div>
                 </div>
@@ -103,13 +128,13 @@ export const Features = () => {
               <div className="grid md:grid-cols-2 gap-8 items-center mb-8">
                 <div>
                   <h3 className="text-3xl font-bold mb-4">
-                    Your time is worth more than manual posting
+                    Stop creating one video at a time
                   </h3>
                   <p className="text-muted-foreground text-lg leading-relaxed">
-                    AdStreamAI automates YouTube and TikTok posting completely
-                    and generates ready-to-paste content for Instagram,
-                    Facebook, and LinkedIn. Save hours on video creation and
-                    caption writing.
+                    While others spend hours making one ad, you're generating
+                    5-10 variations in different styles. Test what works, scale
+                    what converts, and dominate every platform with
+                    ready-to-publish content.
                   </p>
                 </div>
                 <div className="space-y-4">
@@ -118,9 +143,11 @@ export const Features = () => {
                       <div className="w-2 h-2 rounded-full bg-green-500" />
                     </div>
                     <div>
-                      <p className="font-semibold">Save 10+ hours per week</p>
+                      <p className="font-semibold">
+                        Generate 10+ videos per product
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        No more manual video editing or caption writing
+                        Create multiple styles at once—find your winner faster
                       </p>
                     </div>
                   </div>
@@ -129,9 +156,9 @@ export const Features = () => {
                       <div className="w-2 h-2 rounded-full bg-green-500" />
                     </div>
                     <div>
-                      <p className="font-semibold">Post 10x more content</p>
+                      <p className="font-semibold">A/B test effortlessly</p>
                       <p className="text-sm text-muted-foreground">
-                        Scale your presence without scaling your team
+                        UGC vs Cinematic vs Trend—see what your audience loves
                       </p>
                     </div>
                   </div>
@@ -140,13 +167,37 @@ export const Features = () => {
                       <div className="w-2 h-2 rounded-full bg-green-500" />
                     </div>
                     <div>
-                      <p className="font-semibold">Never miss the algorithm</p>
+                      <p className="font-semibold">Auto-publish everywhere</p>
                       <p className="text-sm text-muted-foreground">
-                        Consistent posting = better reach and engagement
+                        YouTube & TikTok automation + captions for all platforms
                       </p>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Example showcase */}
+              <div className="bg-background/50 backdrop-blur-sm rounded-xl p-6 mb-8 border border-border/50">
+                <p className="text-sm font-semibold text-muted-foreground mb-3">
+                  EXAMPLE WORKFLOW
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+                    1 Product Photo
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  <div className="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-sm">
+                    Select 5 Styles
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
+                  <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-sm font-semibold">
+                    5 Unique Videos Ready
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3">
+                  💡 Generated in under 3 minutes. Published to YouTube & TikTok
+                  automatically.
+                </p>
               </div>
 
               <div className="text-center pt-4">
@@ -154,11 +205,11 @@ export const Features = () => {
                   size="lg"
                   className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-8 py-6 rounded-xl font-semibold shadow-lg"
                 >
-                  Start Creating Free
+                  Start Batch Creating Free
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-4">
-                  No credit card required • 7-day free trial
+                  No credit card required • Generate up to 3 videos free
                 </p>
               </div>
             </div>

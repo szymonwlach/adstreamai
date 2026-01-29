@@ -24,13 +24,15 @@ export const CTA = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6">
-            <Button
-              size="lg"
-              className="group bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-10 py-7 rounded-xl font-semibold shadow-lg glow-primary transition-all"
-            >
-              Start Creating Ads
-              <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
+            <a href="/auth">
+              <Button
+                size="lg"
+                className="group bg-gradient-to-r from-primary to-accent hover:opacity-90 text-lg px-10 py-7 rounded-xl font-semibold shadow-lg glow-primary transition-all"
+              >
+                Start Creating Ads
+                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </a>
             <a href="#showcase">
               <Button
                 size="lg"

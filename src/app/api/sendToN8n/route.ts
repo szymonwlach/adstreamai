@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     if (!user_id || !project_id) {
       return NextResponse.json(
         { error: "User ID and Project ID required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       console.error("❌ N8N_WEBHOOK_URL not configured!");
       return NextResponse.json(
         { error: "n8n webhook URL not configured" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         error: "Failed to send to n8n",
         details: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

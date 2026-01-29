@@ -25,7 +25,6 @@ import {
   Film,
   Palette,
   ChevronDown,
-  Play,
   Camera,
   Lightbulb,
   Monitor,
@@ -96,7 +95,7 @@ const QUALITY_OPTIONS = [
     name: "1080p Full HD",
     subtitle: "Sora 2 Pro",
     icon: Monitor,
-    locked: true, // Will be dynamically checked
+    locked: true,
     badge: "PRO",
   },
   {
@@ -194,7 +193,7 @@ const GenerateAdContent = () => {
   const [colorScheme, setColorScheme] = useState("auto");
 
   const [expandedSection, setExpandedSection] = useState<string | null>(
-    "styles",
+    "video",
   );
 
   const prevCampaignIdRef = useRef<string | null>(null);
@@ -213,6 +212,7 @@ const GenerateAdContent = () => {
   ];
 
   const videoStyles = [
+    // FREE STYLES
     {
       id: "ugc",
       name: "UGC Style",
@@ -232,15 +232,6 @@ const GenerateAdContent = () => {
       previewVideo: "/previews_video/trend.mp4",
     },
     {
-      id: "cinematic_luxury",
-      name: "Cinematic Luxury",
-      desc: "Slow motion, premium lighting",
-      icon: "💎",
-      premium: false,
-      category: "premium",
-      previewVideo: "/previews_video/luxury_watch.mp4",
-    },
-    {
       id: "product_showcase",
       name: "Studio Focus",
       desc: "Clean, professional product shots",
@@ -248,24 +239,6 @@ const GenerateAdContent = () => {
       premium: false,
       category: "ecommerce",
       previewVideo: "/previews_video/product_showcase.mp4",
-    },
-    {
-      id: "stop_motion",
-      name: "Stop-Motion",
-      desc: "Playful, frame-by-frame animation",
-      icon: "🧱",
-      premium: false,
-      category: "creative",
-      previewVideo: "/previews_video/stop_motion.mp4",
-    },
-    {
-      id: "before_after",
-      name: "Before/After",
-      desc: "Proven result transformation",
-      icon: "🔄",
-      premium: false,
-      category: "ecommerce",
-      previewVideo: "/previews_video/before_after.mp4",
     },
     {
       id: "educational",
@@ -276,12 +249,41 @@ const GenerateAdContent = () => {
       category: "organic",
       previewVideo: "/previews_video/educational.mp4",
     },
+
+    // PREMIUM STYLES
+    {
+      id: "cinematic_luxury",
+      name: "Cinematic Luxury",
+      desc: "Slow motion, premium lighting",
+      icon: "💎",
+      premium: true,
+      category: "premium",
+      previewVideo: "/previews_video/luxury_watch.mp4",
+    },
+    {
+      id: "stop_motion",
+      name: "Stop-Motion",
+      desc: "Playful, frame-by-frame animation",
+      icon: "🧱",
+      premium: true,
+      category: "creative",
+      previewVideo: "/previews_video/stop_motion.mp4",
+    },
+    {
+      id: "before_after",
+      name: "Before/After",
+      desc: "Proven result transformation",
+      icon: "🔄",
+      premium: true,
+      category: "ecommerce",
+      previewVideo: "/previews_video/before_after.mp4",
+    },
     {
       id: "lifestyle",
       name: "Lifestyle",
       desc: "Product in real-world scenarios",
       icon: "✨",
-      premium: false,
+      premium: true,
       category: "ecommerce",
       previewVideo: "/previews_video/lifestyle.mp4",
     },
@@ -290,7 +292,7 @@ const GenerateAdContent = () => {
       name: "Unboxing",
       desc: "First impression & reveal experience",
       icon: "🎁",
-      premium: false,
+      premium: true,
       category: "trending",
       previewVideo: "/previews_video/unboxing.mp4",
     },
@@ -299,7 +301,7 @@ const GenerateAdContent = () => {
       name: "ASMR/Satisfying",
       desc: "Focus on textures and close-ups",
       icon: "🎧",
-      premium: false,
+      premium: true,
       category: "trending",
       previewVideo: "/previews_video/asmr.mp4",
     },
@@ -308,7 +310,7 @@ const GenerateAdContent = () => {
       name: "Cyber Tech",
       desc: "Futuristic neons and glitch effects",
       icon: "🤖",
-      premium: false,
+      premium: true,
       category: "creative",
       previewVideo: "/previews_video/cyber_tech.mp4",
     },
@@ -317,7 +319,7 @@ const GenerateAdContent = () => {
       name: "Dreamy Surreal",
       desc: "Physics-defying magic visuals",
       icon: "🌌",
-      premium: false,
+      premium: true,
       category: "premium",
       previewVideo: "/previews_video/surreal.mp4",
     },
@@ -360,16 +362,28 @@ const GenerateAdContent = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
+      if (!session?.user?.id) {
+        console.error("No user session found");
+        return;
+      }
+
       const response = await fetch("/api/getPlan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: session?.user.id }),
+        body: JSON.stringify({ user_id: session.user.id }),
       });
-      const user_plan = await response.json();
-      setUserPlan(user_plan);
-      setUserCredits(user_plan.credits || 0);
+
+      const data = await response.json();
+
+      console.log("✅ User plan loaded:", data);
+
+      setUserPlan(data);
+      setUserCredits(data.credits || 0);
     } catch (error) {
-      console.error("Failed to get user plan", error);
+      console.error("❌ Failed to get user plan:", error);
+      setUserPlan({ plan: "free", credits: 0 });
+      setUserCredits(0);
     }
   };
 
@@ -433,7 +447,7 @@ const GenerateAdContent = () => {
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
-          onClick: () => router.push("/dashboard/billing"),
+          onClick: () => router.push("/dashboard/pricing"),
         },
       });
       return;
@@ -445,7 +459,7 @@ const GenerateAdContent = () => {
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
-          onClick: () => router.push("/#pricing"),
+          onClick: () => router.push("/dashboard/pricing"),
         },
       });
       return;
@@ -462,7 +476,7 @@ const GenerateAdContent = () => {
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
-          onClick: () => router.push("/dashboard/billing"),
+          onClick: () => router.push("/dashboard/pricing"),
         },
       });
       return;
@@ -471,7 +485,7 @@ const GenerateAdContent = () => {
     setSelectedDuration(duration as DurationType);
   };
 
-  // ==================== STYLE TOGGLE ====================
+  // ==================== STYLE TOGGLE - MULTI SELECT ====================
   const toggleStyle = useCallback(
     (styleId: string, isPremium: boolean) => {
       if (isPremium && isFreeUser) {
@@ -480,13 +494,17 @@ const GenerateAdContent = () => {
           icon: <Crown className="w-5 h-5 text-amber-500" />,
           action: {
             label: "Upgrade",
-            onClick: () => router.push("/dashboard/billing"),
+            onClick: () => router.push("/dashboard/pricing"),
           },
         });
         return;
       }
 
-      setSelectedStyles((prev) => (prev.includes(styleId) ? [] : [styleId]));
+      setSelectedStyles((prev) =>
+        prev.includes(styleId)
+          ? prev.filter((id) => id !== styleId)
+          : [...prev, styleId],
+      );
     },
     [isFreeUser, router],
   );
@@ -563,6 +581,7 @@ const GenerateAdContent = () => {
   const canGenerate =
     hasEnoughCredits && selectedStyles.length > 0 && productImages.length > 0;
 
+  // ==================== GENERATION - IMPROVED ERROR HANDLING ====================
   const handleGenerate = async () => {
     const {
       data: { session },
@@ -588,7 +607,7 @@ const GenerateAdContent = () => {
         description: `You need ${estimatedCost - userCredits} more credits`,
         action: {
           label: "Get Credits",
-          onClick: () => router.push("/dashboard/billing"),
+          onClick: () => router.push("/dashboard/pricing"),
         },
       });
       return;
@@ -613,6 +632,7 @@ const GenerateAdContent = () => {
         estimated_cost: estimatedCost,
       };
 
+      console.log("📤 Saving projects to database...");
       const saveResponse = await fetch("/api/saveAd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -626,14 +646,26 @@ const GenerateAdContent = () => {
         );
       }
 
-      const { projectId, campaignId: newCampaignId } =
+      const { projectIds, campaignId: newCampaignId } =
         await saveResponse.json();
 
-      // Send to n8n webhook
-      const n8nResponse = await fetch("/api/sendToN8n", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      console.log("✅ Created projects:", projectIds);
+      console.log("🎯 Campaign ID:", newCampaignId);
+
+      // ✅ SEND TO N8N - OSOBNO DLA KAŻDEGO PROJEKTU
+      const costPerVideo = calculateCost(selectedQuality, selectedDuration);
+      const successfulProjects = [];
+      const failedProjects = [];
+
+      for (let i = 0; i < projectIds.length; i++) {
+        const projectId = projectIds[i];
+        const style = selectedStyles[i];
+
+        console.log(
+          `📤 [${i + 1}/${projectIds.length}] Sending project ${projectId} (style: ${style}) to n8n...`,
+        );
+
+        const n8nPayload = {
           project_id: projectId,
           campaign_id: newCampaignId,
           user_id: session.user.id,
@@ -641,7 +673,7 @@ const GenerateAdContent = () => {
           product_name: campaignName.trim() || "Untitled Campaign",
           description: description.trim() || undefined,
           product_images: productImages,
-          selected_styles: selectedStyles,
+          selected_styles: [style],
           language:
             languages.find((l) => l.code === selectedLanguage)?.name ||
             "English",
@@ -651,31 +683,103 @@ const GenerateAdContent = () => {
           subtitle_style: subtitlesEnabled ? subtitleStyle : null,
           color_scheme: subtitlesEnabled ? colorScheme : null,
           music_enabled: musicEnabled,
-          estimated_cost: estimatedCost,
-        }),
-      });
+          estimated_cost: costPerVideo,
+        };
 
-      const n8nData = await n8nResponse.json();
+        console.log(
+          `📦 Payload for project ${projectId}:`,
+          JSON.stringify(n8nPayload, null, 2),
+        );
 
-      if (!n8nResponse.ok) {
-        await fetch("/api/deleteAd", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            project_id: projectId,
-            campaign_id: newCampaignId,
-          }),
-        }).catch((err) => console.error("Rollback failed:", err));
+        try {
+          const n8nResponse = await fetch("/api/sendToN8n", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(n8nPayload),
+          });
 
-        throw new Error(n8nData.error || "Failed to send to n8n");
+          // ✅ IMPROVED: Check response status first
+          console.log(
+            `📡 n8n Response status for ${projectId}:`,
+            n8nResponse.status,
+            n8nResponse.statusText,
+          );
+
+          // ✅ IMPROVED: Try to get response text first (in case it's not JSON)
+          const responseText = await n8nResponse.text();
+          console.log(`📄 n8n Raw response for ${projectId}:`, responseText);
+
+          let n8nData;
+          try {
+            n8nData = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error(
+              `❌ Failed to parse n8n response as JSON for ${projectId}`,
+            );
+            console.error("Response was:", responseText);
+            throw new Error(
+              `Invalid JSON response from n8n: ${responseText.substring(0, 100)}`,
+            );
+          }
+
+          if (!n8nResponse.ok) {
+            console.error(`❌ Failed to send project ${projectId} to n8n`);
+            console.error("Status:", n8nResponse.status);
+            console.error("Error details:", n8nData);
+            failedProjects.push({ projectId, style, error: n8nData });
+            continue; // ✅ Continue to next project
+          }
+
+          console.log(`✅ Project ${projectId} sent to n8n successfully`);
+          console.log("Response:", n8nData);
+          successfulProjects.push({ projectId, style });
+        } catch (error) {
+          console.error(`❌ Error sending project ${projectId}:`, error);
+          console.error(
+            "Error type:",
+            error instanceof Error ? error.message : typeof error,
+          );
+          failedProjects.push({
+            projectId,
+            style,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          continue; // ✅ Continue despite error
+        }
       }
 
-      toast.success(
-        campaignId ? "More ads are being generated!" : "Campaign created!",
+      // ✅ IMPROVED: Better user feedback
+      console.log("📊 Generation Summary:");
+      console.log(
+        `  ✅ Successful: ${successfulProjects.length}/${projectIds.length}`,
       );
+      console.log(`  ❌ Failed: ${failedProjects.length}/${projectIds.length}`);
+
+      if (successfulProjects.length > 0) {
+        toast.success(
+          `${successfulProjects.length} ad${successfulProjects.length !== 1 ? "s" : ""} ${
+            campaignId ? "added to campaign" : "campaign created"
+          }!`,
+          {
+            description:
+              failedProjects.length > 0
+                ? `${failedProjects.length} ad${failedProjects.length !== 1 ? "s" : ""} failed to generate`
+                : undefined,
+          },
+        );
+      }
+
+      if (failedProjects.length > 0 && successfulProjects.length === 0) {
+        toast.error("Failed to generate ads", {
+          description:
+            "Please try again or contact support if the issue persists",
+        });
+      }
+
+      // Navigate to my-ads page
       router.push("/dashboard/my-ads?refresh=true");
     } catch (error) {
-      console.error("❌ Error:", error);
+      console.error("❌ Error in handleGenerate:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       toast.error("Failed to generate ads", { description: errorMessage });
@@ -694,81 +798,60 @@ const GenerateAdContent = () => {
       onToggle: (styleId: string, isPremium: boolean) => void;
     }) => {
       const isLocked = style.premium && isFreeUser;
-      const videoRef = useRef<HTMLVideoElement>(null);
-
-      const handleMouseEnter = () => {
-        if (!isLocked && videoRef.current) {
-          videoRef.current.play().catch(() => {});
-        }
-      };
-
-      const handleMouseLeave = () => {
-        if (videoRef.current) {
-          videoRef.current.pause();
-          videoRef.current.currentTime = 0;
-        }
-      };
 
       return (
         <Card
-          className={`relative overflow-hidden transition-all duration-300 group ${
+          className={`relative overflow-hidden transition-all duration-200 cursor-pointer ${
             isLocked
-              ? "opacity-60 cursor-not-allowed"
-              : `cursor-pointer hover:shadow-lg ${
+              ? "opacity-60 hover:opacity-70"
+              : `hover:shadow-md hover:scale-[1.01] ${
                   isSelected
-                    ? "ring-2 ring-primary shadow-md"
-                    : "hover:ring-1 hover:ring-primary/50"
+                    ? "ring-2 ring-primary shadow-md bg-primary/5"
+                    : "hover:ring-1 hover:ring-primary/30"
                 }`
           }`}
           onClick={() => onToggle(style.id, style.premium)}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
         >
-          <div className="relative aspect-[9/16] bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center overflow-hidden">
-            {style.previewVideo ? (
-              <>
-                <video
-                  ref={videoRef}
-                  src={style.previewVideo}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loop
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none" />
-              </>
-            ) : (
-              <>
-                <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 flex items-center justify-center">
-                  <div className="text-center space-y-3">
-                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto backdrop-blur-sm">
-                      <Play className="w-8 h-8 text-white fill-white" />
-                    </div>
-                    <p className="text-white text-sm font-medium">
-                      Preview Style
-                    </p>
+          <div className="relative p-4 flex flex-col items-center justify-center min-h-[100px] bg-gradient-to-br from-muted/50 to-muted/30">
+            {isLocked && (
+              <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-amber-500" />
                   </div>
                 </div>
-                <span className="text-6xl opacity-20">{style.icon}</span>
-              </>
+              </div>
             )}
-            {isSelected && (
-              <div className="absolute top-2 right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center z-20">
-                <Sparkles className="w-4 h-4 text-white" />
+
+            <div
+              className={`text-3xl mb-2 transition-transform ${
+                isSelected && !isLocked ? "scale-110" : ""
+              }`}
+            >
+              {style.icon}
+            </div>
+
+            {isSelected && !isLocked && (
+              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Sparkles className="w-3 h-3 text-white" />
+              </div>
+            )}
+
+            {isLocked && (
+              <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
+                <Crown className="w-2.5 h-2.5 text-amber-500" />
+                <span className="text-[8px] font-bold text-amber-600 uppercase">
+                  Pro
+                </span>
               </div>
             )}
           </div>
 
-          <div className="p-3 space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{style.icon}</span>
-              <h4 className="font-semibold text-sm">{style.name}</h4>
-              {isLocked && (
-                <Crown className="w-3.5 h-3.5 text-amber-500 ml-auto" />
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground">{style.desc}</p>
+          <div className="p-3 pt-2 border-t">
+            <h4 className="font-semibold text-xs mb-0.5">{style.name}</h4>
+            <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
+              {style.desc}
+            </p>
           </div>
         </Card>
       );
@@ -921,26 +1004,90 @@ const GenerateAdContent = () => {
 
           {/* Video Styles */}
           <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <Label className="text-lg">Choose Video Style *</Label>
-              <span className="text-sm text-muted-foreground">
-                {selectedStyles.length} selected
-              </span>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <Label className="text-lg font-semibold">
+                  Choose Video Styles *
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select multiple styles to create variety (each style =
+                  separate video)
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedStyles.length > 0 && (
+                  <div className="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <span className="text-sm font-semibold text-primary">
+                      {selectedStyles.length} style
+                      {selectedStyles.length !== 1 ? "s" : ""} selected
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {videoStyles.map((style) => (
-                <StyleCard
-                  key={style.id}
-                  style={style}
-                  isSelected={selectedStyles.includes(style.id)}
-                  onToggle={toggleStyle}
-                />
-              ))}
+            <div className="space-y-6">
+              {/* FREE Styles */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-px bg-border flex-1" />
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Free Styles
+                  </h3>
+                  <div className="h-px bg-border flex-1" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {videoStyles
+                    .filter((style) => !style.premium)
+                    .map((style) => (
+                      <StyleCard
+                        key={style.id}
+                        style={style}
+                        isSelected={selectedStyles.includes(style.id)}
+                        onToggle={toggleStyle}
+                      />
+                    ))}
+                </div>
+              </div>
+
+              {/* PREMIUM Styles */}
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-px bg-border flex-1" />
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-amber-500" />
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                      Premium Styles
+                    </h3>
+                  </div>
+                  <div className="h-px bg-border flex-1" />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {videoStyles
+                    .filter((style) => style.premium)
+                    .map((style) => (
+                      <StyleCard
+                        key={style.id}
+                        style={style}
+                        isSelected={selectedStyles.includes(style.id)}
+                        onToggle={toggleStyle}
+                      />
+                    ))}
+                </div>
+              </div>
             </div>
+
+            {selectedStyles.length === 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-dashed">
+                <p className="text-xs text-muted-foreground text-center">
+                  💡 Tip: Select multiple styles to generate different versions
+                  of your ad
+                </p>
+              </div>
+            )}
           </Card>
 
-          {/* Video Settings - New Premium UI */}
+          {/* Video Settings */}
           <CollapsibleSection
             id="video"
             title="Video Settings"
@@ -951,17 +1098,17 @@ const GenerateAdContent = () => {
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
           >
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Quality Selector */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2.5">
                   <Label className="text-sm font-semibold">Video Quality</Label>
                   <span className="text-xs text-muted-foreground">
                     {calculateCost(selectedQuality, selectedDuration)} credits
                     per video
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2.5">
                   {QUALITY_OPTIONS.map((quality) => {
                     const isLocked =
                       (quality.id === "1080p" && !canUse1080p) ||
@@ -971,7 +1118,7 @@ const GenerateAdContent = () => {
                     return (
                       <Card
                         key={quality.id}
-                        className={`p-4 cursor-pointer transition-all ${
+                        className={`p-3 cursor-pointer transition-all ${
                           isLocked
                             ? "opacity-50 cursor-not-allowed"
                             : `hover:shadow-md ${
@@ -982,19 +1129,19 @@ const GenerateAdContent = () => {
                         }`}
                         onClick={() => handleQualitySelect(quality.id)}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <quality.icon className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex items-start justify-between mb-1.5">
+                          <quality.icon className="w-4 h-4 text-muted-foreground" />
                           {isLocked && (
-                            <Lock className="w-4 h-4 text-amber-500" />
+                            <Lock className="w-3.5 h-3.5 text-amber-500" />
                           )}
                           {quality.badge && !isLocked && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
                               {quality.badge}
                             </span>
                           )}
                         </div>
-                        <p className="font-semibold text-sm">{quality.name}</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                        <p className="font-semibold text-xs">{quality.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
                           {quality.subtitle}
                         </p>
                       </Card>
@@ -1005,7 +1152,7 @@ const GenerateAdContent = () => {
 
               {/* Duration Selector */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2.5">
                   <Label className="text-sm font-semibold">
                     Video Duration
                   </Label>
@@ -1013,7 +1160,7 @@ const GenerateAdContent = () => {
                     Longer videos = More engagement
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   {DURATION_OPTIONS.map((duration) => {
                     const isLocked = duration.id === 15 && !canUse15sec;
                     const isSelected = selectedDuration === duration.id;
@@ -1021,7 +1168,7 @@ const GenerateAdContent = () => {
                     return (
                       <Card
                         key={duration.id}
-                        className={`p-4 cursor-pointer transition-all ${
+                        className={`p-3 cursor-pointer transition-all ${
                           isLocked
                             ? "opacity-50 cursor-not-allowed"
                             : `hover:shadow-md ${
@@ -1032,18 +1179,20 @@ const GenerateAdContent = () => {
                         }`}
                         onClick={() => handleDurationSelect(duration.id)}
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <duration.icon className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex items-start justify-between mb-1.5">
+                          <duration.icon className="w-4 h-4 text-muted-foreground" />
                           {isLocked && (
-                            <Lock className="w-4 h-4 text-amber-500" />
+                            <Lock className="w-3.5 h-3.5 text-amber-500" />
                           )}
                           {duration.badge && !isLocked && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600">
                               {duration.badge}
                             </span>
                           )}
                         </div>
-                        <p className="font-semibold">{duration.label}</p>
+                        <p className="font-semibold text-sm">
+                          {duration.label}
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {calculateCost(
                             selectedQuality,
@@ -1252,7 +1401,7 @@ const GenerateAdContent = () => {
           </CollapsibleSection>
         </div>
 
-        {/* Generate Button - Enhanced */}
+        {/* Generate Button */}
         <Card className="p-6 mt-6 shadow-lg border-2">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1262,7 +1411,7 @@ const GenerateAdContent = () => {
                   <>
                     Creating {selectedStyles.length} video
                     {selectedStyles.length !== 1 ? "s" : ""} •{" "}
-                    {selectedQuality.toUpperCase()} • {selectedDuration}s
+                    {selectedQuality.toUpperCase()} • {selectedDuration}s each
                   </>
                 ) : (
                   "Select at least one video style to continue"
@@ -1305,8 +1454,9 @@ const GenerateAdContent = () => {
               size="lg"
             >
               <Wand2 className="w-5 h-5" />
-              Generate{" "}
-              {selectedStyles.length > 0 ? `(${estimatedCost} credits)` : ""}
+              {selectedStyles.length > 0
+                ? `Generate ${selectedStyles.length} Video${selectedStyles.length !== 1 ? "s" : ""} (${estimatedCost} credits)`
+                : "Generate Videos"}
             </Button>
           </div>
 
@@ -1319,7 +1469,7 @@ const GenerateAdContent = () => {
               <Button
                 variant="link"
                 className="w-full mt-2 text-destructive hover:text-destructive/80"
-                onClick={() => router.push("/dashboard/billing")}
+                onClick={() => router.push("/dashboard/pricing")}
               >
                 Get More Credits →
               </Button>

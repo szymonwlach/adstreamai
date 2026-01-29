@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <ComingSoon />
+      {/* <ComingSoon /> */}
 
       <div className="mt-4 md:mt-0 lg:-mt-5" id="showcase">
         <AdTransformationShowcase />
