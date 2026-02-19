@@ -548,7 +548,7 @@ const tiers = [
     yearlyPrice: "24",
     yearlyPromoPrice: "16",
     credits: "300",
-    valueIndicator: "Enough for ~20 basic ads",
+    // valueIndicator: "Enough for ~20 basic ads",
     stripeMonthlyPriceId: "price_starter_monthly_placeholder",
     stripeYearlyPriceId: "price_starter_yearly_placeholder",
     features: [
@@ -571,7 +571,7 @@ const tiers = [
     yearlyPrice: "66",
     yearlyPromoPrice: "49",
     credits: "750",
-    valueIndicator: "Enough for ~50 professional ads",
+    // valueIndicator: "Enough for ~50 professional ads",
     stripeMonthlyPriceId: "price_pro_monthly_placeholder",
     stripeYearlyPriceId: "price_pro_yearly_placeholder",
     features: [
@@ -594,7 +594,7 @@ const tiers = [
     yearlyPrice: "124",
     yearlyPromoPrice: "99",
     credits: "2000",
-    valueIndicator: "Enough for ~130 enterprise ads",
+    // valueIndicator: "Enough for ~130 enterprise ads",
     stripeMonthlyPriceId: "price_scale_monthly_placeholder",
     stripeYearlyPriceId: "price_scale_yearly_placeholder",
     features: [
@@ -704,7 +704,7 @@ export const Pricing = () => {
               Choose Your <span className="text-gradient">Growth Plan</span>
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Simple credit-based pricing. ~15 credits = 1 video ad.
+              Simple credit-based pricing. From 15 credits per video.
               <br />
               {WAITLIST_MODE ? (
                 <span className="text-primary font-semibold">
@@ -835,9 +835,9 @@ export const Pricing = () => {
                             </span>
                           </div>
                         </div>
-                        <p className="text-xs text-center text-muted-foreground font-medium">
+                        {/* <p className="text-xs text-center text-muted-foreground font-medium">
                           {tier.valueIndicator}
-                        </p>
+                       </p> */}
                       </div>
                     </div>
 
