@@ -612,9 +612,6 @@ const tiers = [
   },
 ];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
 // ============================================================
 // PRICING
 // ============================================================
@@ -622,7 +619,11 @@ export const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
   const router = useRouter();
   const pathname = usePathname();
   const isDashboard = pathname.startsWith("/dashboard");
@@ -634,6 +635,7 @@ export const Pricing = () => {
       "WAITLIST_MODE:",
       WAITLIST_MODE,
     );
+    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
     if (WAITLIST_MODE) {
       setWaitlistOpen(true);
       return;
