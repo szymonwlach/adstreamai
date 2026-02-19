@@ -1,12 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function POST(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Missing Supabase env vars");
+    return NextResponse.json(
+      { error: "Server misconfiguration" },
+      { status: 500 },
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     const { videoId, projectId, userId } = await request.json();
     console.log("🔄 Retry request:", { videoId, projectId, userId });
@@ -126,10 +134,6 @@ export async function POST(request: NextRequest) {
       quality: project.quality || "720p",
       duration: project.duration || 10,
       plan: project.plan || "free",
-      // subtitles_enabled: project.subtitles_enabled || false,
-      // subtitle_style: project.subtitle_style || null,
-      // music_enabled: project.music_enabled || false,
-      // color_scheme: project.color_scheme || null,
       tone_of_voice: project.tone_of_voice || "casual",
       custom_hook: project.custom_hook || null,
       key_message: project.key_message || null,
