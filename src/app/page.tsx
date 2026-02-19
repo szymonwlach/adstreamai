@@ -8,12 +8,13 @@ import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
 import ComingSoon from "@/components/landing/ComingSoon";
 import AdTransformationShowcase from "@/components/landing/Showcase";
+import { FAQ } from "@/components/landing/FAQ";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <ComingSoon />
+      {/* <ComingSoon /> */}
 
       <div className="mt-4 md:mt-0 lg:-mt-5" id="showcase">
         <AdTransformationShowcase />
@@ -25,7 +26,10 @@ export default function HomePage() {
       <div id="features">
         <Features />
       </div>
+
       <Pricing />
+
+      <FAQ />
       <CTA />
       <div id="footer">
         <Footer />

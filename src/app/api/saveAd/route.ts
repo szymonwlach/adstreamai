@@ -14,25 +14,44 @@ export async function POST(req: NextRequest) {
       name,
       description,
       product_url,
-      selected_style, // To jest array stylów
+      selected_style,
       language,
       quality,
       duration,
       campaign_id,
-      subtitles_enabled,
-      subtitle_style,
-      music_enabled,
-      color_scheme,
+      // subtitles_enabled,
+      // subtitle_style,
+      // music_enabled,
+      // color_scheme,
+      // ✅ NEW CREATIVE FIELDS
+      tone_of_voice,
+      custom_hook,
+      key_message,
+      call_to_action,
+      target_audience,
+      key_selling_points,
     } = body;
 
     // Clean up empty strings to null
     name = name && name.trim() ? name.trim() : null;
     description = description && description.trim() ? description.trim() : null;
+    custom_hook = custom_hook && custom_hook.trim() ? custom_hook.trim() : null;
+    key_message = key_message && key_message.trim() ? key_message.trim() : null;
+    call_to_action =
+      call_to_action && call_to_action.trim() ? call_to_action.trim() : null;
+    target_audience =
+      target_audience && target_audience.trim() ? target_audience.trim() : null;
+    key_selling_points =
+      key_selling_points && key_selling_points.trim()
+        ? key_selling_points.trim()
+        : null;
 
     console.log("🧹 After cleanup:");
     console.log("  Name:", name);
     console.log("  Description:", description);
     console.log("  Selected styles:", selected_style);
+    console.log("  Custom hook:", custom_hook);
+    console.log("  Tone:", tone_of_voice);
 
     // Walidacja wymaganych pól
     if (
@@ -115,7 +134,7 @@ export async function POST(req: NextRequest) {
           .insert(campaignsTable)
           .values({
             user_id,
-            name: name || "Untitled Campaign",
+            name: name || "Setting up your campaign...",
             description: description,
             product_image_url: product_url,
             videos_generated: selected_style.length,
@@ -143,15 +162,22 @@ export async function POST(req: NextRequest) {
           name: name,
           description: description,
           product_image_url: product_url,
-          selected_styles: [style], // ✅ POJEDYNCZY STYL w array
+          selected_styles: [style],
           language: language || "en",
           status: "processing",
           quality: quality || "720p",
           duration: duration || 10,
-          subtitles_enabled: subtitles_enabled ?? false,
-          subtitle_style: subtitles_enabled ? subtitle_style : null,
-          music_enabled: music_enabled ?? true,
-          color_scheme: subtitles_enabled ? color_scheme : null,
+          // subtitles_enabled: subtitles_enabled ?? false,
+          // subtitle_style: subtitles_enabled ? subtitle_style : null,
+          // music_enabled: music_enabled ?? true,
+          // color_scheme: subtitles_enabled ? color_scheme : null,
+          // ✅ NEW CREATIVE FIELDS
+          tone_of_voice: tone_of_voice || "casual",
+          custom_hook: custom_hook,
+          key_message: key_message,
+          call_to_action: call_to_action,
+          target_audience: target_audience,
+          key_selling_points: key_selling_points,
         })
         .returning();
 
@@ -164,7 +190,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      projectIds: createdProjects.map((p) => p.id), // ✅ Array wszystkich project IDs
+      projectIds: createdProjects.map((p) => p.id),
       campaignId: campaignId,
       message: `Created ${createdProjects.length} project(s) with ${selected_style.length} video(s)`,
     });

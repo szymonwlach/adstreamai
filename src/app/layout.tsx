@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryProvider } from "@/components/providers/ReactQueryProvider";
 import ClientToaster from "@/components/ui/client-toaster";
 import CookieConsent from "@/components/CookieConsent";
-
+import { Analytics } from "@vercel/analytics/next";
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-plus-jakarta",
@@ -43,6 +43,7 @@ export default function RootLayout({
             {/* <CookieConsent /> */}
           </TooltipProvider>
         </ReactQueryProvider>
+        <Analytics />
       </body>
     </html>
   );

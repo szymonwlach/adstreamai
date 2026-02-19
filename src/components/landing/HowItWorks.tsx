@@ -22,7 +22,7 @@ const steps = [
     icon: Youtube,
     title: "Auto-Publish All Videos",
     description:
-      "Automatically publish and schedule all your generated videos to YouTube and TikTok. For Instagram and Facebook, get platform-specific captions ready to paste.",
+      "Automatically publish your videos to YouTube and TikTok, or get platform-specific captions in seconds.",
     step: "03",
     highlight: "YouTube & TikTok automated",
   },
@@ -85,85 +85,6 @@ export const HowItWorks = () => {
             ))}
           </div>
         </div>
-
-        {/* Batch Generation Example */}
-        {/* <div className="max-w-5xl mx-auto mb-16">
-          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-primary/10 via-background to-accent/10 border border-primary/20">
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold mb-3">
-                Real example: One product, multiple winners
-              </h3>
-              <p className="text-muted-foreground">
-                Generate 5 different video styles simultaneously and see what
-                performs best
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-5 gap-4 mb-8">
-              {[
-                { name: "UGC", emoji: "👤", color: "blue" },
-                { name: "Trend", emoji: "⚡", color: "purple" },
-                { name: "Cinematic", emoji: "💎", color: "amber" },
-                { name: "ASMR", emoji: "🎧", color: "green" },
-                { name: "Educational", emoji: "🎓", color: "indigo" },
-              ].map((style, i) => (
-                <div
-                  key={i}
-                  className={`p-4 rounded-xl bg-${style.color}-500/10 border border-${style.color}-500/20 text-center`}
-                >
-                  <div className="text-3xl mb-2">{style.emoji}</div>
-                  <p className="text-sm font-semibold">{style.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Video #{i + 1}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-background/50 backdrop-blur-sm rounded-xl p-6 border border-border/50">
-              <p className="text-sm font-semibold text-muted-foreground mb-3">
-                📊 WHAT YOU GET
-              </p>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="font-medium">
-                      5 unique video variations
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="font-medium">
-                      5 sets of captions & hashtags
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="font-medium">
-                      Auto-scheduled to YouTube & TikTok
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span className="font-medium">
-                      Ready for Instagram, Facebook, LinkedIn
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-border/50">
-                <p className="text-xs text-muted-foreground text-center">
-                  💡 <strong>Pro tip:</strong> Let them all run for a week, then
-                  double down on the highest performer
-                </p>
-              </div>
-            </div>
-          </div>
-        </div> */}
-
         {/* Visual example section */}
         <div className="max-w-5xl mx-auto mb-16">
           <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-primary/5 via-background to-accent/5 border border-primary/20">

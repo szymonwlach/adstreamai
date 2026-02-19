@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     if (!videoId) {
       return NextResponse.json(
         { error: "Missing videoId parameter" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest) {
       },
       youtube: {
         // Mapujemy z youtube_shorts zgodnie z Twoim formatem
-        title: ai.youtube_shorts?.title || "",
-        description: ai.youtube_shorts?.description || "",
+        title: ai.youtube?.title || "",
+        description: ai.youtube?.description || "",
       },
       tiktok: {
         text: ai.tiktok?.text || "",
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching video captions:", error);
     return NextResponse.json(
       { error: "Internal server error", details: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -28,7 +28,7 @@ import { toast } from "sonner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import CaptionEditorModal from "@/components/my-ads/CaptionEditModal";
-
+import Swal from "sweetalert2";
 interface Video {
   id: string;
   project_id: string;
@@ -213,8 +213,8 @@ const MyContent = () => {
               quality: project.quality,
               duration: project.duration,
               language: project.language,
-              status: project.status, // ✅ STATUS Z PROJEKTU!
-              project_status: project.status, // Dla pewności zapisz też osobno
+              status: project.status,
+              project_status: project.status,
             })),
           );
         }
@@ -232,6 +232,41 @@ const MyContent = () => {
     return campaign.projects.filter((p: any) => p.status === "processing");
   };
   const handleDeleteProject = async (projectId: string, campaignId: string) => {
+    // ✅ SweetAlert confirmation
+    const result = await Swal.fire({
+      title: "Delete Video?",
+      html: `
+      <div style="text-align: left; margin-top: 16px;">
+        <p style="color: #e5e7eb; margin-bottom: 12px;">This will permanently delete:</p>
+        <ul style="color: #9ca3af; list-style: none; padding: 0;">
+          <li style="margin-bottom: 8px;">• The generated video</li>
+          <li style="margin-bottom: 8px;">• All associated data</li>
+          <li>• This action cannot be undone</li>
+        </ul>
+      </div>
+    `,
+      icon: "warning",
+      background: "#1e293b",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#475569",
+      confirmButtonText:
+        '<span style="font-weight: 600;">Yes, delete project</span>',
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      customClass: {
+        popup: "rounded-xl border border-red-500/30",
+        title: "text-xl font-bold",
+        confirmButton: "px-6 py-2 rounded-lg",
+        cancelButton: "px-6 py-2 rounded-lg",
+      },
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
     try {
       toast.loading("Deleting video...", { id: "delete-toast" });
 
@@ -244,26 +279,113 @@ const MyContent = () => {
         }),
       });
 
-      // ✅ Najpierw sprawdź status
       if (!response.ok) {
-        const text = await response.text(); // Pobierz jako text zamiast JSON
+        const text = await response.text();
         console.error("Error response:", text);
         throw new Error(text || "Failed to delete video");
       }
 
-      // Dopiero teraz parsuj JSON
       const data = await response.json();
       toast.dismiss("delete-toast");
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to delete video");
-      }
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Project has been deleted successfully.",
+        icon: "success",
+        background: "#1e293b",
+        color: "#fff",
+        confirmButtonColor: "#10b981",
+        timer: 2000,
+        customClass: {
+          popup: "rounded-xl border border-green-500/30",
+        },
+      });
 
-      toast.success("Video deleted successfully!");
-      fetchCampaigns(false); // Odśwież listę
+      fetchCampaigns(false);
     } catch (error: any) {
       toast.dismiss("delete-toast");
-      toast.error(error.message || "Failed to delete video");
+      toast.error(error.message || "Failed to delete project");
+    }
+  };
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (!userId) {
+      toast.error("User session not found. Please refresh the page.");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "Delete Campaign?",
+      html: `
+      <div style="text-align: left; margin-top: 16px;">
+        <p style="color: #e5e7eb; margin-bottom: 12px;">This will permanently delete:</p>
+        <ul style="color: #9ca3af; list-style: none; padding: 0;">
+          <li style="margin-bottom: 8px;">• All generated videos</li>
+          <li style="margin-bottom: 8px;">• Campaign settings</li>
+          <li>• This action cannot be undone</li>
+        </ul>
+      </div>
+    `,
+      icon: "warning",
+      background: "#1e293b",
+      color: "#fff",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#475569",
+      confirmButtonText:
+        '<span style="font-weight: 600;">Yes, delete campaign</span>',
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      customClass: {
+        popup: "rounded-xl border border-red-500/30",
+        title: "text-xl font-bold",
+        confirmButton: "px-6 py-2 rounded-lg",
+        cancelButton: "px-6 py-2 rounded-lg",
+      },
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    try {
+      console.log("🔍 Delete request:", { campaignId, userId });
+
+      toast.loading("Deleting campaign...", { id: "delete-campaign-toast" });
+
+      const response = await fetch("/api/delete-campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaignId: campaignId,
+          userId: userId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete campaign");
+      }
+
+      toast.dismiss("delete-campaign-toast");
+
+      await Swal.fire({
+        title: "Deleted!",
+        text: "Campaign and all videos have been deleted.",
+        icon: "success",
+        background: "#1e293b",
+        color: "#fff",
+        confirmButtonColor: "#10b981",
+        timer: 2000,
+        customClass: {
+          popup: "rounded-xl border border-green-500/30",
+        },
+      });
+
+      fetchCampaigns(false);
+    } catch (error: any) {
+      toast.dismiss("delete-campaign-toast");
+      toast.error(error.message || "Failed to delete campaign");
     }
   };
   const fetchConnectedPlatforms = async () => {
@@ -317,7 +439,6 @@ const MyContent = () => {
 
       const data = await response.json();
       if (data.campaigns.length !== 0) {
-        // Fix product_image_url - handle comma-separated URLs or arrays
         const fixedCampaigns = data.campaigns.map((campaign: Campaign) => {
           console.log(
             "🔍 Original product_image_url:",
@@ -326,16 +447,12 @@ const MyContent = () => {
 
           let imageUrl = campaign.product_image_url;
 
-          // If it's a string with commas, split and take first
           if (typeof imageUrl === "string" && imageUrl.includes(",")) {
             imageUrl = imageUrl.split(",")[0].trim();
-          }
-          // If it's an array, take the first element
-          else if (Array.isArray(imageUrl)) {
+          } else if (Array.isArray(imageUrl)) {
             imageUrl = imageUrl[0];
           }
 
-          // If it's still not a valid string or is empty, use a placeholder
           if (
             !imageUrl ||
             typeof imageUrl !== "string" ||
@@ -385,12 +502,10 @@ const MyContent = () => {
             const elapsedSeconds = (now - parseInt(startTime)) / 1000;
             let calculatedProgress = (elapsedSeconds / 230) * 100;
 
-            // Po 95% - spowolnij drastycznie
             if (calculatedProgress >= 95) {
-              // Dodaj tylko 0.5% za każde kolejne 30 sekund po osiągnięciu 95%
               const timeAfter95 = elapsedSeconds - 230 * 0.95;
               const extraProgress = (timeAfter95 / 30) * 0.5;
-              calculatedProgress = 95 + Math.min(4.9, extraProgress); // Max 99.9%
+              calculatedProgress = 95 + Math.min(4.9, extraProgress);
             }
 
             updated[project.id] = Math.min(99.9, calculatedProgress);
@@ -405,26 +520,18 @@ const MyContent = () => {
     const interval = setInterval(updateProgress, 1000);
     return () => clearInterval(interval);
   }, [campaigns]);
-  // const handleManualRefresh = async () => {
-  //   setIsRefreshing(true);
-  //   await fetchCampaigns(false);
-  //   setTimeout(() => setIsRefreshing(false), 500);
-  //   toast.success("Content refreshed!");
-  // };
 
   useEffect(() => {
     fetchConnectedPlatforms();
     fetchCampaigns();
 
-    // First auto-refresh after 10 seconds
     const initialRefreshTimeout = setTimeout(() => {
       fetchCampaigns(false);
-    }, 12500); // 12.5 seconds
+    }, 12500);
 
-    // Then auto-refresh every 30 sec
     const autoRefreshInterval = setInterval(() => {
       fetchCampaigns(false);
-    }, 30000); // 30 sec = 30000ms
+    }, 30000);
 
     return () => {
       clearTimeout(initialRefreshTimeout);
@@ -469,7 +576,6 @@ const MyContent = () => {
   };
 
   const handleGenerateMore = (campaign: Campaign) => {
-    // Tylko campaign_id i prefill flag - reszta załaduje się z API
     router.push(
       `/dashboard/generate-ad?campaign_id=${campaign.id}&prefill=true`,
     );
@@ -479,7 +585,6 @@ const MyContent = () => {
     try {
       setLoadingCaptions(true);
 
-      // Pobierz prawdziwe AI captions z bazy danych
       const response = await fetch(
         `/api/get-video-captions?videoId=${video.id}`,
       );
@@ -540,18 +645,109 @@ const MyContent = () => {
       toast.error(error.message || "Failed to post video");
     }
   };
-  const handleRetryFailedVideo = async (video: any, campaign: Campaign) => {
-    // FIRST - show alert to user immediately
-    alert("Starting retry process...");
 
+  useEffect(() => {
+    const checkStuckProjects = async () => {
+      if (!userId) return;
+
+      const TIMEOUT_MS = 7 * 60 * 1000;
+      const now = Date.now();
+
+      for (const campaign of campaigns) {
+        const processingProjects = getProcessingProjects(campaign);
+
+        for (const project of processingProjects) {
+          const createdAt = new Date(project.created_at).getTime();
+          const elapsedTime = now - createdAt;
+
+          if (elapsedTime > TIMEOUT_MS) {
+            console.log(
+              `⏰ Project ${project.id} stuck in processing for ${Math.round(elapsedTime / 1000)}s`,
+            );
+
+            try {
+              const costPerVideo = calculateCost(
+                project.quality,
+                project.duration,
+              );
+
+              const refundResponse = await fetch("/api/refund-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  user_id: userId,
+                  amount: costPerVideo,
+                }),
+              });
+
+              if (refundResponse.ok) {
+                console.log(
+                  `✅ Refunded ${costPerVideo} credits for stuck project ${project.id}`,
+                );
+              }
+
+              const updateResponse = await fetch("/api/update-project-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  project_id: project.id,
+                  status: "failed",
+                }),
+              });
+
+              if (updateResponse.ok) {
+                console.log(
+                  `✅ Project ${project.id} marked as error (timeout)`,
+                );
+
+                toast.error(
+                  `Generation timeout: ${project.selected_styles?.[0] || "video"}`,
+                  {
+                    description: `No response after 7 minutes. ${costPerVideo} credits refunded. You can retry below.`,
+                    duration: 10000,
+                  },
+                );
+
+                fetchCampaigns(false);
+              }
+            } catch (error) {
+              console.error("❌ Error handling stuck project:", error);
+            }
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(() => {
+      checkStuckProjects();
+    }, 30000);
+
+    checkStuckProjects();
+
+    return () => clearInterval(interval);
+  }, [campaigns, userId]);
+
+  const calculateCost = (quality: string, duration: number): number => {
+    const CREDIT_COSTS = {
+      "720p": { 10: 15, 15: 25 },
+      "1080p": { 10: 75, 15: 135 },
+      ultra: { 10: 160, 15: 300 },
+    } as const;
+
+    type QualityType = keyof typeof CREDIT_COSTS;
+    type DurationType = keyof (typeof CREDIT_COSTS)["720p"];
+
+    const q = quality as QualityType;
+    const d = duration as DurationType;
+
+    return CREDIT_COSTS[q]?.[d] || 15;
+  };
+
+  const handleRetryFailedVideo = async (video: any, campaign: Campaign) => {
     try {
-      console.log("🔄 STEP 1: Starting retry for video:", video.id);
-      console.log("Video data:", video);
-      console.log("Campaign data:", campaign);
+      console.log("🔄 Starting retry for video:", video.id);
 
       toast.loading("Retrying video generation...", { id: "retry-toast" });
-
-      console.log("🔄 STEP 2: Calling API...");
 
       const response = await fetch("/api/retry-video-generation", {
         method: "POST",
@@ -563,19 +759,13 @@ const MyContent = () => {
         }),
       });
 
-      console.log("🔄 STEP 3: Got response:", response.status);
-
       const data = await response.json();
-      console.log("📥 STEP 4: Response data:", data);
-
       toast.dismiss("retry-toast");
 
       if (!response.ok) {
-        alert(`API Error: ${data.error || "Unknown error"}`);
         throw new Error(data.error || "Failed to retry video generation");
       }
 
-      alert("Success! Video generation restarted!");
       toast.success(
         "✅ Video generation restarted! It will be ready in 2-4 minutes.",
         {
@@ -587,15 +777,61 @@ const MyContent = () => {
         fetchCampaigns(false);
       }, 2000);
     } catch (error: any) {
-      console.error("❌ STEP ERROR:", error);
-      alert(`Error occurred: ${error.message}`);
+      console.error("❌ Retry error:", error);
       toast.dismiss("retry-toast");
       toast.error(`Failed to retry: ${error.message}`, {
         duration: 5000,
       });
     }
   };
-  // Calculate stats
+
+  const handleRetryFailedProject = async (project: any) => {
+    try {
+      console.log("🔄 Starting retry for project:", project.id);
+
+      toast.loading("Retrying video generation...", {
+        id: "retry-project-toast",
+      });
+
+      // Pobierz pierwsze video z projektu (jeśli istnieje) lub użyj project.id jako videoId
+      const videoId = project.videos?.[0]?.id || project.id;
+
+      const response = await fetch("/api/retry-video-generation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          videoId: videoId,
+          projectId: project.id,
+          userId: userId,
+        }),
+      });
+
+      const data = await response.json();
+      toast.dismiss("retry-project-toast");
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to retry project generation");
+      }
+
+      toast.success(
+        "✅ Video generation restarted! It will be ready in 2-4 minutes.",
+        {
+          duration: 5000,
+        },
+      );
+
+      setTimeout(() => {
+        fetchCampaigns(false);
+      }, 2000);
+    } catch (error: any) {
+      console.error("❌ Retry error:", error);
+      toast.dismiss("retry-project-toast");
+      toast.error(`Failed to retry: ${error.message}`, {
+        duration: 5000,
+      });
+    }
+  };
+
   const totalVideos = campaigns.reduce(
     (sum, c) => sum + getVideosFromCampaign(c).length,
     0,
@@ -628,19 +864,6 @@ const MyContent = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 mt-[65px]">
       <DashboardNavbar />
-
-      {/* Manual Refresh Button - Fixed Position */}
-      {/* <button
-        onClick={handleManualRefresh}
-        disabled={isRefreshing}
-        className="fixed right-8 top-28 z-50 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold border-2 border-cyan-400/30 hover:border-cyan-300/50 hover:scale-105 active:scale-95"
-        title="Refresh content"
-      >
-        <RefreshCw
-          className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
-        />
-        <span className="hidden sm:inline">Refresh</span>
-      </button> */}
 
       <div className="container mx-auto px-4 py-8 pb-20">
         {/* Global Error Banner */}
@@ -731,7 +954,7 @@ const MyContent = () => {
           </div>
         </div>
 
-        {/* Mobile FAB - na końcu pliku, przed closing </div> */}
+        {/* Mobile FAB */}
         <button
           onClick={() => router.push("/dashboard/generate-ad")}
           className="md:hidden fixed bottom-6 right-6 z-50 bg-cyan-500 hover:bg-cyan-600 text-white p-4 rounded-full shadow-2xl"
@@ -854,7 +1077,6 @@ const MyContent = () => {
                             "❌ Image failed to load:",
                             campaign.product_image_url,
                           );
-                          // Fallback to a colored div if image fails
                           const target = e.target as HTMLImageElement;
                           target.style.display = "none";
                           const fallback = document.createElement("div");
@@ -905,7 +1127,6 @@ const MyContent = () => {
 
                   {/* Quick Stats */}
                   <div className="flex gap-3 mt-4">
-                    {/* Failed badge - FIRST AND MOST VISIBLE */}
                     {campaignVideos.filter((v) => v.status === "failed")
                       .length > 0 && (
                       <Badge className="bg-red-500 text-white border-2 border-red-300 text-base px-4 py-2 animate-pulse">
@@ -945,7 +1166,7 @@ const MyContent = () => {
                 {isExpanded && (
                   <div className="px-6 pb-6 border-t border-gray-700">
                     {/* Generate More Button */}
-                    <div className="py-4">
+                    <div className="py-4 justify-between flex flex-col md:flex-row gap-3 md:gap-0">
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -957,8 +1178,18 @@ const MyContent = () => {
                         <Plus className="w-4 h-4" />
                         Generate More Videos
                       </Button>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCampaign(campaign.id);
+                        }}
+                        variant="outline"
+                        className="gap-2 border-red-500/30 hover:bg-red-500/10 hover:border-red-500 text-red-400 hover:text-red-300 transition-all"
+                      >
+                        <X className="w-4 h-4" />
+                        Delete Campaign
+                      </Button>
                     </div>
-                    {/* Failed Videos Section - VERY VISIBLE */}
                     {/* Failed Projects Section */}
                     {getFailedProjects(campaign).length > 0 && (
                       <div className="mb-6">
@@ -990,7 +1221,6 @@ const MyContent = () => {
                                 key={project.id}
                                 className="bg-slate-800/50 border border-orange-500/30 hover:border-orange-500/50 transition-colors relative group"
                               >
-                                {/* DELETE BUTTON */}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -999,7 +1229,7 @@ const MyContent = () => {
                                       campaign.id,
                                     );
                                   }}
-                                  className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all  z-10"
+                                  className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all z-10"
                                   title="Delete this video"
                                 >
                                   <X className="w-4 h-4" />
@@ -1017,11 +1247,9 @@ const MyContent = () => {
                                     size="sm"
                                     variant="outline"
                                     className="w-full border-orange-500/30 hover:bg-orange-500/10 text-orange-300"
-                                    onClick={() => {
-                                      toast.info(
-                                        "Retry project functionality - TODO",
-                                      );
-                                    }}
+                                    onClick={() =>
+                                      handleRetryFailedProject(project)
+                                    }
                                   >
                                     <RefreshCw className="w-3 h-3 mr-1" />
                                     Retry generation
@@ -1084,9 +1312,8 @@ const MyContent = () => {
                               return (
                                 <Card
                                   key={video.id}
-                                  className="bg-slate-800/50 border border-orange-500/30 hover:border-orange-500/50 transition-colors overflow-hidden"
+                                  className="bg-slate-800/50 border border-orange-500/30 hover:border-orange-500/50 transition-colors overflow-hidden group"
                                 >
-                                  {/* DELETE BUTTON */}
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1100,7 +1327,6 @@ const MyContent = () => {
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
-                                  {/* Failed Video Preview */}
                                   <div className="relative aspect-[9/16] bg-gradient-to-br from-red-900 to-red-950">
                                     <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                                       <div className="bg-red-500 p-4 rounded-full mb-4">
@@ -1114,19 +1340,16 @@ const MyContent = () => {
                                       </p>
                                     </div>
 
-                                    {/* Number Badge */}
                                     <div className="absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-full font-bold text-sm">
                                       #{videoNumber}
                                     </div>
 
-                                    {/* Failed Badge */}
                                     <div className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full font-bold text-sm flex items-center gap-1">
                                       <X className="w-3 h-3" />
                                       FAILED
                                     </div>
                                   </div>
 
-                                  {/* Video Info */}
                                   <div className="p-4 bg-red-950/50">
                                     <div className="flex items-center gap-2 mb-3">
                                       <Badge className="bg-red-500 text-white">
@@ -1160,30 +1383,13 @@ const MyContent = () => {
                                       {video.language?.toUpperCase() || "EN"}
                                     </p>
 
-                                    {/* Retry Button - PROMINENT */}
                                     <button
                                       type="button"
                                       className="w-full bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-
-                                        // Immediate feedback
-                                        const btn = e.currentTarget;
-                                        btn.style.opacity = "0.5";
-                                        btn.disabled = true;
-
-                                        alert(
-                                          `Retrying video generation for Video #${campaignVideos.length - campaignVideos.indexOf(video)}`,
-                                        );
-
-                                        handleRetryFailedVideo(
-                                          video,
-                                          campaign,
-                                        ).finally(() => {
-                                          btn.style.opacity = "1";
-                                          btn.disabled = false;
-                                        });
+                                        handleRetryFailedVideo(video, campaign);
                                       }}
                                     >
                                       <RefreshCw className="w-4 h-4" />
@@ -1208,7 +1414,6 @@ const MyContent = () => {
                               </h4>
                             </div>
 
-                            {/* Info banner */}
                             <div className="bg-orange-500/20 border border-orange-500/40 rounded-lg p-3 flex items-center gap-3">
                               <div className="bg-orange-500 p-2 rounded-lg">
                                 <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -1243,10 +1448,9 @@ const MyContent = () => {
                               return (
                                 <div
                                   key={project.id}
-                                  className="bg-gray-900/30 border border-orange-500/20 rounded-xl p-5"
+                                  className="bg-gray-900/30 border border-orange-500/20 rounded-xl p-5 relative"
                                 >
-                                  {/* DELETE BUTTON */}
-                                  <button
+                                  {/* <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleDeleteProject(
@@ -1254,12 +1458,11 @@ const MyContent = () => {
                                         campaign.id,
                                       );
                                     }}
-                                    className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all  z-10"
+                                    className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all z-10"
                                     title="Cancel and delete"
                                   >
                                     <X className="w-4 h-4" />
-                                  </button>
-                                  {/* Header - minimalistyczny */}
+                                  </button> */}
                                   <div className="flex items-center justify-between mb-4">
                                     <span className="text-white text-sm font-medium">
                                       Generating video
@@ -1269,7 +1472,6 @@ const MyContent = () => {
                                     </span>
                                   </div>
 
-                                  {/* Progress bar - clean */}
                                   <div className="relative w-full bg-gray-800/50 rounded-full h-2 overflow-hidden mb-4">
                                     <div
                                       className="absolute inset-y-0 left-0 bg-orange-500 transition-all duration-1000 ease-out"
@@ -1277,7 +1479,6 @@ const MyContent = () => {
                                     />
                                   </div>
 
-                                  {/* Footer - minimal info */}
                                   <div className="flex items-center justify-between text-xs text-gray-500">
                                     <span>
                                       {project.quality} · {project.duration}s ·{" "}
@@ -1318,9 +1519,8 @@ const MyContent = () => {
                             return (
                               <Card
                                 key={video.id}
-                                className="bg-gray-900/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all"
+                                className="bg-gray-900/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all group"
                               >
-                                {/* DELETE BUTTON - tylko dla ready videos */}
                                 {video.status === "ready" && (
                                   <button
                                     onClick={(e) => {
@@ -1330,15 +1530,14 @@ const MyContent = () => {
                                         campaign.id,
                                       );
                                     }}
-                                    className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all  z-10"
+                                    className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-10"
                                     title="Delete this video"
                                   >
                                     <X className="w-4 h-4" />
                                   </button>
                                 )}
-                                {/* Video Preview */}
                                 <div
-                                  className="relative aspect-[9/16] cursor-pointer group"
+                                  className="relative aspect-[9/16] cursor-pointer"
                                   onClick={() =>
                                     setPreviewVideo({
                                       ...video,
@@ -1387,23 +1586,19 @@ const MyContent = () => {
                                     </div>
                                   )}
 
-                                  {/* Number Badge */}
                                   <div
                                     className={`absolute top-2 left-2 ${colorScheme.num} text-white px-3 py-1 rounded-full font-bold text-sm`}
                                   >
                                     #{videoNumber}
                                   </div>
 
-                                  {/* Style Icon */}
                                   <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-xl">
                                     {styleMapping[video.style]?.icon || "🎬"}
                                   </div>
 
-                                  {/* Dark overlay gradient */}
                                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
                                 </div>
 
-                                {/* Video Info */}
                                 <div className="p-3">
                                   <div className="flex items-center gap-2 mb-2">
                                     {video.status === "processing" && (
@@ -1443,8 +1638,6 @@ const MyContent = () => {
                                     ).toLocaleDateString()}
                                   </p>
 
-                                  {/* Actions */}
-                                  {/* Actions */}
                                   {video.status === "ready" &&
                                     video.video_url && (
                                       <div className="flex gap-2">
@@ -1571,7 +1764,6 @@ const MyContent = () => {
             className="bg-gray-900 rounded-2xl max-w-md w-full overflow-hidden relative"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* SINGLE X BUTTON - outside the header, fixed to modal */}
             <button
               onClick={() => setPreviewVideo(null)}
               className="absolute top-3 right-3 z-50 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-colors"

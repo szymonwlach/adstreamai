@@ -22,30 +22,18 @@ export const subscriptionStatusEnum = pgEnum("subscription_status", [
   "trialing",
 ]);
 export const videoStyleEnum = pgEnum("video_style", [
-  // "ugc",
-  // "fast_paced",
-  // "product_showcase",
-  // "trend_viral",
-  // "testimonial",
-  // "before_after",
-  // "educational",
-  // "lifestyle",
-  // "unboxing",
-  // "comparison",
-  // "asmr",
-  // "meme_style",
-  "ugc", // Autentyczność, styl nagrania telefonem
-  "trend", // Dynamiczne cięcia, zoomy, wysoka energia
-  "cinematic_luxury", // Elegancja, slow-motion, oświetlenie premium
-  "product_showcase", // Skupienie na detalu i jakości produktu
-  "stop_motion", // Kreatywny, skaczący ruch, styl animacji
-  "before_after", // Transformacja, pokazanie efektu "przed i po"
-  "educational", // Wiedza, napisy, przejrzyste wyjaśnienia
-  "lifestyle", // Produkt w naturalnym, codziennym użyciu
-  "unboxing", // Emocja odkrywania i otwierania produktu
-  "asmr", // Zbliżenia macro, tekstury, bodźce wizualne
-  "cyber_glitch", // Futurystyczny vibe, neony, technologia
-  "surreal_abstract", // Magia, lewitacja, niemożliwa fizyka (Sora 2 Power)
+  "ugc",
+  "trend",
+  "cinematic_luxury",
+  "product_showcase",
+  "stop_motion",
+  "before_after",
+  "educational",
+  "lifestyle",
+  "unboxing",
+  "asmr",
+  "cyber_glitch",
+  "surreal_abstract",
 ]);
 export const platformEnum = pgEnum("platform", [
   "tiktok",
@@ -66,6 +54,20 @@ export const projectStatusEnum = pgEnum("project_status", [
   "ready",
   "failed",
 ]);
+export const toneEnum = pgEnum("tone_of_voice", [
+  "casual",
+  "professional",
+  "playful",
+  "luxury",
+  "urgent",
+]);
+
+// ✅ NEW: Waitlist Status Enum
+export const waitlistStatusEnum = pgEnum("waitlist_status", [
+  "pending", // Czeka na dostęp
+  "accepted", // Dostał dostęp do platformy
+  "rewarded", // Już dostał bonus credits
+]);
 
 // ============================================
 // USERS & SUBSCRIPTIONS
@@ -74,11 +76,40 @@ export const projectStatusEnum = pgEnum("project_status", [
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  display_name: text("display_name"), // ADD THIS - user's display name
+  avatar_url: text("avatar_url"), // ADD THIS - URL to avatar image
   plan: planEnum("plan").notNull().default("free"),
   credits: integer("credits").notNull().default(50),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   is_active: boolean("is_active").notNull().default(true),
+  deleted_at: timestamp("deleted_at"), // Already added
+});
+export const reviewsTable = pgTable("reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  user_email: text("user_email").notNull(),
+  user_name: text("user_name"), // Display name at time of review
+  user_avatar: text("user_avatar"), // Avatar URL at time of review
+  rating: integer("rating").notNull(), // 1-5 stars
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  is_verified: boolean("is_verified").notNull().default(false), // Admin can verify
+  is_published: boolean("is_published").notNull().default(true),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Optional: Table for admin responses to reviews
+export const reviewResponsesTable = pgTable("review_responses", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  review_id: uuid("review_id")
+    .notNull()
+    .references(() => reviewsTable.id, { onDelete: "cascade" }),
+  response: text("response").notNull(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const subscriptionsTable = pgTable("subscriptions", {
@@ -89,15 +120,28 @@ export const subscriptionsTable = pgTable("subscriptions", {
     .unique(),
   stripe_subscription_id: text("stripe_subscription_id").unique(),
   stripe_customer_id: text("stripe_customer_id"),
-  stripe_price_id: text("stripe_price_id"), // Dzięki temu wiemy, jaki plan doładować
+  stripe_price_id: text("stripe_price_id"),
   status: subscriptionStatusEnum("status").notNull(),
-  current_period_end: timestamp("current_period_end"), // Data ważności kredytów/planu
+  current_period_end: timestamp("current_period_end"),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ============================================
-// CAMPAIGNS (NEW!)
+// ✅ WAITLIST TABLE
+// ============================================
+
+export const waitlistTable = pgTable("waitlist", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  user_id: uuid("user_id").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================
+// CAMPAIGNS
 // ============================================
 
 export const campaignsTable = pgTable("campaigns", {
@@ -136,13 +180,25 @@ export const projectsTable = pgTable("projects", {
   status: projectStatusEnum("status").notNull().default("processing"),
   quality: text("quality").notNull(),
   duration: integer("duration"),
-  subtitles_enabled: boolean("subtitles_enabled").notNull().default(false),
-  subtitle_style: text("subtitle_style"),
-  color_scheme: text("color_scheme"),
-  music_enabled: boolean("music_enabled").notNull().default(true),
+
+  // Audio/Visual Settings
+  // subtitles_enabled: boolean("subtitles_enabled").notNull().default(false),
+  // subtitle_style: text("subtitle_style"),
+  // color_scheme: text("color_scheme"),
+  // music_enabled: boolean("music_enabled").notNull().default(true),
+
+  // Creative Control Fields
+  tone_of_voice: toneEnum("tone_of_voice").default("casual"),
+  custom_hook: text("custom_hook"),
+  key_message: text("key_message"),
+  call_to_action: text("call_to_action"),
+  target_audience: text("target_audience"),
+  key_selling_points: text("key_selling_points"),
+
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
+
 // ============================================
 // AI GENERATED VIDEOS
 // ============================================
@@ -156,10 +212,7 @@ export const videosTable = pgTable("videos", {
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   video_url: text("video_url").notNull(),
-  // thumbnail_url: text("thumbnail_url"),
   style: videoStyleEnum("style").notNull(),
-  // caption: text("caption"),
-  // hashtags: text("hashtags").array(),
   ai_captions: jsonb("ai_captions").$type<{
     instagram?: {
       text: string;
@@ -184,13 +237,12 @@ export const videosTable = pgTable("videos", {
       text: string;
     };
   }>(),
-
   metadata: jsonb("metadata"),
   created_at: timestamp("created_at").notNull().defaultNow(),
 });
 
 // ============================================
-// SOCIAL MEDIA CONNECTIONS (UPDATED!)
+// SOCIAL MEDIA CONNECTIONS
 // ============================================
 
 export const socialConnectionsTable = pgTable("social_connections", {
@@ -199,27 +251,18 @@ export const socialConnectionsTable = pgTable("social_connections", {
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   platform: platformEnum("platform").notNull(),
-
-  // Generic fields
   platform_user_id: text("platform_user_id").notNull(),
   platform_username: text("platform_username"),
   access_token: text("access_token").notNull(),
   refresh_token: text("refresh_token"),
   token_expires_at: timestamp("token_expires_at"),
-
-  // NEW: Instagram/Facebook specific fields
-  page_id: text("page_id"), // Facebook Page ID (needed for Instagram)
-  instagram_account_id: text("instagram_account_id"), // Instagram Business Account ID
-  page_access_token: text("page_access_token"), // Separate token for page
-
-  // Additional metadata in JSON for platform-specific data
-  platform_metadata: jsonb("platform_metadata"), // Store any extra data per platform
-
+  page_id: text("page_id"),
+  instagram_account_id: text("instagram_account_id"),
+  page_access_token: text("page_access_token"),
+  platform_metadata: jsonb("platform_metadata"),
   is_active: boolean("is_active").notNull().default(true),
   connected_at: timestamp("connected_at").notNull().defaultNow(),
   last_used_at: timestamp("last_used_at"),
-
-  // Optional: Track last token refresh
   last_token_refresh: timestamp("last_token_refresh"),
 });
 
@@ -299,6 +342,9 @@ export type SelectUser = typeof usersTable.$inferSelect;
 
 export type InsertSubscription = typeof subscriptionsTable.$inferInsert;
 export type SelectSubscription = typeof subscriptionsTable.$inferSelect;
+
+export type InsertWaitlist = typeof waitlistTable.$inferInsert;
+export type SelectWaitlist = typeof waitlistTable.$inferSelect;
 
 export type InsertCampaign = typeof campaignsTable.$inferInsert;
 export type SelectCampaign = typeof campaignsTable.$inferSelect;

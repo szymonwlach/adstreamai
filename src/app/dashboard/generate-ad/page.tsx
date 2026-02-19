@@ -31,6 +31,18 @@ import {
   Clock,
   Lock,
   Zap,
+  CircleChevronLeft,
+  Target,
+  MessageSquare,
+  Megaphone,
+  Users,
+  Flame,
+  ArrowRight,
+  Star,
+  Smile,
+  Briefcase,
+  Gem,
+  PartyPopper,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -45,6 +57,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { DashboardNavbar } from "@/components/dashboardPage/DashboardNavbar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -111,6 +124,111 @@ const QUALITY_OPTIONS = [
 const DURATION_OPTIONS = [
   { id: 10, label: "10 seconds", icon: Clock },
   { id: 15, label: "15 seconds", icon: Clock, badge: "PRO" },
+];
+
+// ==================== SUBTITLE STYLES ====================
+const SUBTITLE_STYLES = [
+  {
+    id: "karaoke",
+    name: "Karaoke (TikTok)",
+    desc: "Word-by-word highlight animation",
+    preview: "🎤",
+  },
+  {
+    id: "modern",
+    name: "Modern Bold",
+    desc: "Large, high-contrast text",
+    preview: "💪",
+  },
+  {
+    id: "minimal",
+    name: "Clean Minimal",
+    desc: "Simple, elegant captions",
+    preview: "✨",
+  },
+  {
+    id: "caption",
+    name: "Caption Box",
+    desc: "Background panel for clarity",
+    preview: "📦",
+  },
+];
+
+const COLOR_SCHEMES = [
+  { id: "auto", name: "Auto (AI)", desc: "AI picks best colors" },
+  { id: "vibrant", name: "Vibrant", desc: "Bold yellows & reds" },
+  { id: "pastel", name: "Pastel", desc: "Soft, gentle colors" },
+  { id: "dark", name: "Dark Mode", desc: "White text on dark" },
+  { id: "neon", name: "Neon", desc: "Bright glowing colors" },
+];
+
+// ==================== TONE OF VOICE OPTIONS ====================
+const TONE_OPTIONS = [
+  {
+    id: "casual",
+    name: "Casual & Friendly",
+    icon: Smile,
+    desc: "Relaxed, approachable, conversational",
+    example: '"Hey! Check this out..."',
+  },
+  {
+    id: "professional",
+    name: "Professional",
+    icon: Briefcase,
+    desc: "Polished, trustworthy, authoritative",
+    example: '"Discover the solution..."',
+  },
+  {
+    id: "playful",
+    name: "Playful & Fun",
+    icon: PartyPopper,
+    desc: "Energetic, humorous, entertaining",
+    example: '"Wait till you see this! 🔥"',
+  },
+  {
+    id: "luxury",
+    name: "Luxury & Premium",
+    icon: Gem,
+    desc: "Sophisticated, exclusive, elegant",
+    example: '"Experience excellence..."',
+  },
+  {
+    id: "urgent",
+    name: "Urgent & Bold",
+    icon: Flame,
+    desc: "FOMO-driven, action-oriented, direct",
+    example: '"Don\'t miss out! Limited time..."',
+  },
+];
+
+// ==================== CTA SUGGESTIONS ====================
+const CTA_SUGGESTIONS = [
+  "Shop Now",
+  "Learn More",
+  "Get Yours Today",
+  "Try It Free",
+  "Limited Offer",
+  "Order Now",
+  "Discover More",
+  "Join Now",
+  "Start Free Trial",
+  "Get Started",
+  "Claim Your Discount",
+  "Buy Now",
+];
+
+// ==================== HOOK SUGGESTIONS ====================
+const HOOK_SUGGESTIONS = [
+  "Stop scrolling! This changes everything...",
+  "You need to see this before it's too late",
+  "This is the [product] everyone's talking about",
+  "I wish I knew about this sooner",
+  "POV: You discover the perfect [product]",
+  "Wait... it does WHAT?!",
+  "The secret nobody tells you about [problem]",
+  "Before vs After using this",
+  "Why is nobody talking about this?",
+  "This solved my biggest problem",
 ];
 
 // ==================== COLLAPSIBLE SECTION ====================
@@ -186,11 +304,19 @@ const GenerateAdContent = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
 
+  // ==================== CREATIVE CONTROLS ====================
+  const [selectedTone, setSelectedTone] = useState<string>("casual");
+  const [customHook, setCustomHook] = useState("");
+  const [keyMessage, setKeyMessage] = useState("");
+  const [callToAction, setCallToAction] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [keySellingPoints, setKeySellingPoints] = useState("");
+
+  // ==================== VIDEO ENHANCEMENTS ====================
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
-  const [subtitleStyle, setSubtitleStyle] = useState("modern");
-  const [musicEnabled, setMusicEnabled] = useState(false);
-  const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
+  const [subtitleStyle, setSubtitleStyle] = useState("karaoke");
   const [colorScheme, setColorScheme] = useState("auto");
+  const [musicEnabled, setMusicEnabled] = useState(false);
 
   const [expandedSection, setExpandedSection] = useState<string | null>(
     "video",
@@ -271,7 +397,7 @@ const GenerateAdContent = () => {
     },
     {
       id: "before_after",
-      name: "Before/After",
+      name: "Transformation (Before/After)",
       desc: "Proven result transformation",
       icon: "🔄",
       premium: true,
@@ -323,21 +449,6 @@ const GenerateAdContent = () => {
       category: "premium",
       previewVideo: "/previews_video/surreal.mp4",
     },
-  ];
-
-  const subtitleStyles = [
-    { id: "modern", name: "Modern Bold" },
-    { id: "minimal", name: "Minimal" },
-    { id: "karaoke", name: "Karaoke" },
-    { id: "caption", name: "Caption Box" },
-  ];
-
-  const colorSchemes = [
-    { id: "auto", name: "Auto (AI)" },
-    { id: "vibrant", name: "Vibrant" },
-    { id: "pastel", name: "Pastel" },
-    { id: "dark", name: "Dark Mode" },
-    { id: "neon", name: "Neon" },
   ];
 
   // ==================== CREDIT CALCULATION ====================
@@ -400,28 +511,87 @@ const GenerateAdContent = () => {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        const response = await fetch(
+
+        // 1️⃣ Pobierz podstawowe dane kampanii
+        const campaignResponse = await fetch(
           `/api/getCampaigns?user_id=${session?.user.id}`,
         );
-        const data = await response.json();
-        const campaign = data.campaigns.find((c: any) => c.id === campaignId);
+        const campaignData = await campaignResponse.json();
+        const campaign = campaignData.campaigns.find(
+          (c: any) => c.id === campaignId,
+        );
 
-        if (campaign) {
-          setCampaignName(campaign.name);
-          let images: string[] = [];
-          if (campaign.product_image_url) {
-            if (Array.isArray(campaign.product_image_url)) {
-              images = campaign.product_image_url;
-            } else if (typeof campaign.product_image_url === "string") {
-              images = campaign.product_image_url.includes(",")
-                ? campaign.product_image_url
-                    .split(",")
-                    .map((url: string) => url.trim())
-                : [campaign.product_image_url];
-            }
+        if (!campaign) {
+          toast.error("Campaign not found");
+          return;
+        }
+
+        // 2️⃣ Pobierz ostatni projekt z tej kampanii, żeby skopiować ustawienia
+        const projectResponse = await fetch(
+          `/api/getProjects?campaign_id=${campaignId}&user_id=${session?.user.id}`,
+        );
+        const projectData = await projectResponse.json();
+        const lastProject = projectData.projects?.[0]; // Najnowszy projekt
+
+        // 3️⃣ Wypełnij podstawowe dane z kampanii
+        setCampaignName(campaign.name || "");
+        let images: string[] = [];
+        if (campaign.product_image_url) {
+          if (Array.isArray(campaign.product_image_url)) {
+            images = campaign.product_image_url;
+          } else if (typeof campaign.product_image_url === "string") {
+            images = campaign.product_image_url.includes(",")
+              ? campaign.product_image_url
+                  .split(",")
+                  .map((url: string) => url.trim())
+              : [campaign.product_image_url];
           }
-          setProductImages(images);
-          setDescription(campaign.description || "");
+        }
+        setProductImages(images);
+        setDescription(campaign.description || "");
+
+        // 4️⃣ Jeśli istnieje projekt, wypełnij WSZYSTKIE ustawienia z niego
+        if (lastProject) {
+          console.log("📋 Loading settings from last project:", lastProject);
+
+          // Video Settings
+          if (lastProject.language) setSelectedLanguage(lastProject.language);
+          if (lastProject.quality)
+            setSelectedQuality(lastProject.quality as QualityType);
+          if (lastProject.duration)
+            setSelectedDuration(lastProject.duration as DurationType);
+
+          // Video Enhancements
+          if (lastProject.subtitles_enabled !== undefined) {
+            setSubtitlesEnabled(lastProject.subtitles_enabled);
+          }
+          if (lastProject.subtitle_style)
+            setSubtitleStyle(lastProject.subtitle_style);
+          if (lastProject.color_scheme)
+            setColorScheme(lastProject.color_scheme);
+          if (lastProject.music_enabled !== undefined) {
+            setMusicEnabled(lastProject.music_enabled);
+          }
+
+          // Creative Controls
+          if (lastProject.tone_of_voice)
+            setSelectedTone(lastProject.tone_of_voice);
+          if (lastProject.custom_hook) setCustomHook(lastProject.custom_hook);
+          if (lastProject.key_message) setKeyMessage(lastProject.key_message);
+          if (lastProject.call_to_action)
+            setCallToAction(lastProject.call_to_action);
+          if (lastProject.target_audience)
+            setTargetAudience(lastProject.target_audience);
+          if (lastProject.key_selling_points)
+            setKeySellingPoints(lastProject.key_selling_points);
+
+          // Selected Styles
+          if (lastProject.selected_styles?.length > 0) {
+            setSelectedStyles(lastProject.selected_styles);
+          }
+
+          toast.success("Campaign settings loaded from previous generation!");
+        } else {
           toast.success("Campaign loaded!");
         }
       } catch (error) {
@@ -447,7 +617,7 @@ const GenerateAdContent = () => {
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
-          onClick: () => router.push("/dashboard/pricing"),
+          onClick: () => router.push("/dashboard/billing"),
         },
       });
       return;
@@ -459,7 +629,7 @@ const GenerateAdContent = () => {
         icon: <Crown className="w-5 h-5 text-amber-500" />,
         action: {
           label: "Upgrade",
-          onClick: () => router.push("/dashboard/pricing"),
+          onClick: () => router.push("/dashboard/billing"),
         },
       });
       return;
@@ -581,7 +751,6 @@ const GenerateAdContent = () => {
   const canGenerate =
     hasEnoughCredits && selectedStyles.length > 0 && productImages.length > 0;
 
-  // ==================== GENERATION - IMPROVED ERROR HANDLING ====================
   const handleGenerate = async () => {
     const {
       data: { session },
@@ -624,12 +793,18 @@ const GenerateAdContent = () => {
         quality: selectedQuality,
         duration: selectedDuration,
         campaign_id: campaignId && campaignId.trim() !== "" ? campaignId : null,
-        subtitles_enabled: subtitlesEnabled,
-        subtitle_style: subtitleStyle,
-        music_enabled: musicEnabled,
-        voiceover_enabled: voiceoverEnabled,
-        color_scheme: colorScheme,
+        // ⚠️ SUBTITLE & MUSIC - DISABLED
+        // subtitles_enabled: subtitlesEnabled,
+        // subtitle_style: subtitleStyle,
+        // music_enabled: musicEnabled,
+        // color_scheme: colorScheme,
         estimated_cost: estimatedCost,
+        tone_of_voice: selectedTone,
+        custom_hook: customHook.trim() || null,
+        key_message: keyMessage.trim() || null,
+        call_to_action: callToAction.trim() || null,
+        target_audience: targetAudience.trim() || null,
+        key_selling_points: keySellingPoints.trim() || null,
       };
 
       console.log("📤 Saving projects to database...");
@@ -652,10 +827,13 @@ const GenerateAdContent = () => {
       console.log("✅ Created projects:", projectIds);
       console.log("🎯 Campaign ID:", newCampaignId);
 
-      // ✅ SEND TO N8N - OSOBNO DLA KAŻDEGO PROJEKTU
       const costPerVideo = calculateCost(selectedQuality, selectedDuration);
       const successfulProjects = [];
       const failedProjects = [];
+
+      // ✅ FIXED: Helper function to add delay between requests
+      const delay = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
 
       for (let i = 0; i < projectIds.length; i++) {
         const projectId = projectIds[i];
@@ -670,7 +848,7 @@ const GenerateAdContent = () => {
           campaign_id: newCampaignId,
           user_id: session.user.id,
           plan: userPlan?.plan,
-          product_name: campaignName.trim() || "Untitled Campaign",
+          product_name: campaignName.trim() || "Setting up your campaign...",
           description: description.trim() || undefined,
           product_images: productImages,
           selected_styles: [style],
@@ -679,11 +857,18 @@ const GenerateAdContent = () => {
             "English",
           quality: selectedQuality,
           duration: selectedDuration,
-          subtitles_enabled: subtitlesEnabled,
-          subtitle_style: subtitlesEnabled ? subtitleStyle : null,
-          color_scheme: subtitlesEnabled ? colorScheme : null,
-          music_enabled: musicEnabled,
+          // ⚠️ SUBTITLE & MUSIC - DISABLED
+          // subtitles_enabled: subtitlesEnabled,
+          // subtitle_style: subtitlesEnabled ? subtitleStyle : null,
+          // color_scheme: subtitlesEnabled ? colorScheme : null,
+          // music_enabled: musicEnabled,
           estimated_cost: costPerVideo,
+          tone_of_voice: selectedTone,
+          custom_hook: customHook.trim() || null,
+          key_message: keyMessage.trim() || null,
+          call_to_action: callToAction.trim() || null,
+          target_audience: targetAudience.trim() || null,
+          key_selling_points: keySellingPoints.trim() || null,
         };
 
         console.log(
@@ -698,14 +883,6 @@ const GenerateAdContent = () => {
             body: JSON.stringify(n8nPayload),
           });
 
-          // ✅ IMPROVED: Check response status first
-          console.log(
-            `📡 n8n Response status for ${projectId}:`,
-            n8nResponse.status,
-            n8nResponse.statusText,
-          );
-
-          // ✅ IMPROVED: Try to get response text first (in case it's not JSON)
           const responseText = await n8nResponse.text();
           console.log(`📄 n8n Raw response for ${projectId}:`, responseText);
 
@@ -723,16 +900,23 @@ const GenerateAdContent = () => {
           }
 
           if (!n8nResponse.ok) {
+            // ✅ FIXED: Corrected console.error syntax
             console.error(`❌ Failed to send project ${projectId} to n8n`);
             console.error("Status:", n8nResponse.status);
             console.error("Error details:", n8nData);
             failedProjects.push({ projectId, style, error: n8nData });
-            continue; // ✅ Continue to next project
+            continue;
           }
 
           console.log(`✅ Project ${projectId} sent to n8n successfully`);
           console.log("Response:", n8nData);
           successfulProjects.push({ projectId, style });
+
+          // ✅ FIXED: Add delay between requests to avoid race conditions
+          if (i < projectIds.length - 1) {
+            console.log(`⏳ Waiting 500ms before next request...`);
+            await delay(500);
+          }
         } catch (error) {
           console.error(`❌ Error sending project ${projectId}:`, error);
           console.error(
@@ -744,29 +928,71 @@ const GenerateAdContent = () => {
             style,
             error: error instanceof Error ? error.message : String(error),
           });
-          continue; // ✅ Continue despite error
+          continue;
         }
       }
 
-      // ✅ IMPROVED: Better user feedback
       console.log("📊 Generation Summary:");
       console.log(
         `  ✅ Successful: ${successfulProjects.length}/${projectIds.length}`,
       );
       console.log(`  ❌ Failed: ${failedProjects.length}/${projectIds.length}`);
 
+      // ✅ POBIERZ KREDYTY TYLKO ZA UDANE PROJEKTY
       if (successfulProjects.length > 0) {
-        toast.success(
-          `${successfulProjects.length} ad${successfulProjects.length !== 1 ? "s" : ""} ${
-            campaignId ? "added to campaign" : "campaign created"
-          }!`,
-          {
-            description:
-              failedProjects.length > 0
-                ? `${failedProjects.length} ad${failedProjects.length !== 1 ? "s" : ""} failed to generate`
-                : undefined,
-          },
+        const totalCost = costPerVideo * successfulProjects.length;
+        const successfulProjectIds = successfulProjects.map((p) => p.projectId);
+
+        console.log(
+          `💳 Deducting ${totalCost} credits for ${successfulProjects.length} successful videos...`,
         );
+
+        try {
+          const deductResponse = await fetch("/api/deductCredits", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: session.user.id,
+              credits_to_deduct: totalCost,
+              project_ids: successfulProjectIds,
+            }),
+          });
+
+          const deductData = await deductResponse.json();
+
+          if (!deductResponse.ok) {
+            console.error("❌ Failed to deduct credits:", deductData);
+            toast.error("Credits deduction failed", {
+              description: "Please contact support",
+            });
+          } else {
+            console.log(
+              `✅ Credits deducted. New balance: ${deductData.new_credits}`,
+            );
+
+            // Zaktualizuj stan kredytów w UI
+            setUserCredits(deductData.new_credits);
+
+            toast.success(
+              `${successfulProjects.length} ad${successfulProjects.length !== 1 ? "s" : ""} ${
+                campaignId ? "added to campaign" : "campaign created"
+              }!`,
+              // {
+              //   description:
+              //     `${totalCost} credits used. New balance: ${deductData.new_credits}` +
+              //     (failedProjects.length > 0
+              //       ? ` • ${failedProjects.length} ad${failedProjects.length !== 1 ? "s" : ""} failed`
+              //       : ""),
+              // },
+            );
+          }
+        } catch (deductError) {
+          console.error("❌ Error deducting credits:", deductError);
+          toast.error("Failed to deduct credits", {
+            description:
+              "Videos were generated but credits weren't deducted. Contact support.",
+          });
+        }
       }
 
       if (failedProjects.length > 0 && successfulProjects.length === 0) {
@@ -776,7 +1002,6 @@ const GenerateAdContent = () => {
         });
       }
 
-      // Navigate to my-ads page
       router.push("/dashboard/my-ads?refresh=true");
     } catch (error) {
       console.error("❌ Error in handleGenerate:", error);
@@ -872,9 +1097,29 @@ const GenerateAdContent = () => {
     );
   }
 
+  // ==================== DYNAMIC BADGE FOR VIDEO SETTINGS ====================
+  const getVideoSettingsBadge = () => {
+    const parts = [];
+    parts.push(selectedQuality.toUpperCase());
+    parts.push(`${selectedDuration}s`);
+    parts.push(languages.find((l) => l.code === selectedLanguage)?.flag || "");
+    // ⚠️ ZAKOMENTOWANE - napisy i muzyka wyłączone
+    // if (subtitlesEnabled) parts.push("📝");
+    // if (musicEnabled) parts.push("🎵");
+    return parts.join(" • ");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardNavbar />
+      <div className="fixed top-20 left-5 z-50">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <CircleChevronLeft size={30} />
+        </button>
+      </div>
       <div className="container mx-auto px-4 py-8 max-w-6xl mt-20">
         {/* Header */}
         <div className="mb-8">
@@ -1087,14 +1332,12 @@ const GenerateAdContent = () => {
             )}
           </Card>
 
-          {/* Video Settings */}
+          {/* ✅ Video Settings - BEZ ENHANCEMENTS */}
           <CollapsibleSection
             id="video"
             title="Video Settings"
             icon={<Film className="w-5 h-5 text-primary" />}
-            badge={`${selectedQuality.toUpperCase()} • ${selectedDuration}s • ${
-              languages.find((l) => l.code === selectedLanguage)?.flag
-            }`}
+            badge={getVideoSettingsBadge()}
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
           >
@@ -1230,12 +1473,192 @@ const GenerateAdContent = () => {
             </div>
           </CollapsibleSection>
 
+          {/* Creative Controls */}
+          <CollapsibleSection
+            id="creative"
+            title="Creative Controls"
+            icon={<MessageSquare className="w-5 h-5 text-amber-500" />}
+            badge={`${
+              customHook || keyMessage || callToAction
+                ? "Customized"
+                : "AI will decide"
+            }`}
+            expandedSection={expandedSection}
+            setExpandedSection={setExpandedSection}
+          >
+            <div className="space-y-5">
+              {/* Info Banner */}
+              <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      💡 Why fill this out?
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Photos alone might not capture your product's unique value
+                      or target audience. Adding these details helps AI create
+                      ads that truly match your vision and resonate with your
+                      customers.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tone of Voice */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <Smile className="w-4 h-4" />
+                  Tone of Voice
+                </Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {TONE_OPTIONS.map((tone) => {
+                    const isSelected = selectedTone === tone.id;
+                    const ToneIcon = tone.icon;
+
+                    return (
+                      <Card
+                        key={tone.id}
+                        className={`p-3 cursor-pointer transition-all ${
+                          isSelected
+                            ? "ring-2 ring-primary bg-primary/5"
+                            : "hover:bg-accent/50 hover:shadow-md"
+                        }`}
+                        onClick={() => setSelectedTone(tone.id)}
+                      >
+                        <div className="flex items-start gap-2 mb-2">
+                          <ToneIcon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold text-xs leading-tight">
+                              {tone.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                              {tone.desc}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-[9px] text-muted-foreground italic bg-muted/50 p-1.5 rounded">
+                          {tone.example}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Hook/Opening Line */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  Opening Hook
+                  <Badge variant="secondary" className="text-[9px]">
+                    First 3 seconds matter!
+                  </Badge>
+                </Label>
+                <Textarea
+                  value={customHook}
+                  onChange={(e) => setCustomHook(e.target.value)}
+                  placeholder="e.g., 'Stop scrolling! This changes everything...' or 'You need to see this before it's too late'"
+                  className="resize-none h-20 text-sm"
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <p className="text-xs text-muted-foreground w-full mb-1">
+                    Quick suggestions:
+                  </p>
+                  {HOOK_SUGGESTIONS.slice(0, 3).map((suggestion, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setCustomHook(suggestion)}
+                    >
+                      {suggestion.substring(0, 30)}...
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Key Message */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <Star className="w-4 h-4 text-yellow-500" />
+                  Key Message
+                </Label>
+                <Textarea
+                  value={keyMessage}
+                  onChange={(e) => setKeyMessage(e.target.value)}
+                  placeholder="What's the main point? e.g., 'Transform your morning routine in 30 seconds' or 'The smartwatch that actually understands you'"
+                  className="resize-none h-20 text-sm"
+                />
+              </div>
+
+              {/* Call to Action */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <ArrowRight className="w-4 h-4 text-green-500" />
+                  Call to Action
+                </Label>
+                <Input
+                  value={callToAction}
+                  onChange={(e) => setCallToAction(e.target.value)}
+                  placeholder="e.g., Shop Now, Learn More, Get Yours Today"
+                  className="text-sm"
+                />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  <p className="text-xs text-muted-foreground w-full mb-1">
+                    Quick picks:
+                  </p>
+                  {CTA_SUGGESTIONS.slice(0, 6).map((cta, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => setCallToAction(cta)}
+                    >
+                      {cta}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Target Audience */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  Target Audience
+                </Label>
+                <Input
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                  placeholder="e.g., Tech-savvy professionals 25-40, Fitness enthusiasts, Busy parents"
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Key Selling Points */}
+              <div>
+                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-purple-500" />
+                  Key Selling Points
+                </Label>
+                <Textarea
+                  value={keySellingPoints}
+                  onChange={(e) => setKeySellingPoints(e.target.value)}
+                  placeholder="What makes your product special? e.g., 'Wireless charging, 7-day battery, waterproof, AI-powered tracking'"
+                  className="resize-none h-20 text-sm"
+                />
+              </div>
+            </div>
+          </CollapsibleSection>
+
           {/* Basic Info */}
           <CollapsibleSection
             id="basic"
-            title="Basic Info (Optional)"
+            title="Basic Info"
             icon={<Info className="w-5 h-5 text-primary" />}
-            badge="Product details"
+            badge="Product details (Optional)"
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
           >
@@ -1257,146 +1680,6 @@ const GenerateAdContent = () => {
                   className="resize-none h-24"
                 />
               </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Style & Audio */}
-          <CollapsibleSection
-            id="style"
-            title="Style & Audio (Optional)"
-            icon={<Palette className="w-5 h-5 text-muted-foreground" />}
-            badge={`${subtitlesEnabled ? "Subtitles" : ""}${
-              subtitlesEnabled && musicEnabled ? " • " : ""
-            }${musicEnabled ? "Music" : ""}${
-              !subtitlesEnabled && !musicEnabled ? "Default settings" : ""
-            }`}
-            expandedSection={expandedSection}
-            setExpandedSection={setExpandedSection}
-          >
-            <div className="space-y-4">
-              <Card
-                className={`p-4 cursor-pointer transition-all duration-200 ${
-                  subtitlesEnabled
-                    ? "ring-2 ring-primary bg-primary/5"
-                    : "hover:bg-accent/50"
-                }`}
-                onClick={() => setSubtitlesEnabled(!subtitlesEnabled)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        subtitlesEnabled
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
-                      <Type className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Subtitles</p>
-                      <p className="text-xs text-muted-foreground">
-                        {subtitlesEnabled
-                          ? "Style settings are active"
-                          : "Enable burned-in captions for your video"}
-                      </p>
-                    </div>
-                  </div>
-                  <Checkbox
-                    checked={subtitlesEnabled}
-                    onCheckedChange={(c) => setSubtitlesEnabled(c as boolean)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-
-                {subtitlesEnabled && (
-                  <div
-                    className="mt-4 pt-4 border-t grid grid-cols-2 gap-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase font-bold text-muted-foreground">
-                        Subtitle Style
-                      </Label>
-                      <Select
-                        value={subtitleStyle}
-                        onValueChange={setSubtitleStyle}
-                      >
-                        <SelectTrigger className="w-full bg-background h-9 text-sm">
-                          <SelectValue placeholder="Select style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subtitleStyles.map((style) => (
-                            <SelectItem key={style.id} value={style.id}>
-                              {style.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase font-bold text-muted-foreground">
-                        Color Palette
-                      </Label>
-                      <Select
-                        value={colorScheme}
-                        onValueChange={setColorScheme}
-                      >
-                        <SelectTrigger className="w-full bg-background h-9 text-sm">
-                          <SelectValue placeholder="Select colors" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {colorSchemes.map((scheme) => (
-                            <SelectItem key={scheme.id} value={scheme.id}>
-                              {scheme.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </Card>
-
-              <Card
-                className={`p-4 cursor-pointer transition-colors ${
-                  musicEnabled
-                    ? "ring-2 ring-primary bg-primary/5"
-                    : "hover:bg-accent/50"
-                }`}
-                onClick={() => setMusicEnabled(!musicEnabled)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-full ${
-                        musicEnabled
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      }`}
-                    >
-                      {musicEnabled ? (
-                        <Volume2 className="w-5 h-5" />
-                      ) : (
-                        <VolumeX className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">Background Music</p>
-                      <p className="text-xs text-muted-foreground">
-                        {musicEnabled
-                          ? "Music will be added to your video"
-                          : "Enable background music for your video"}
-                      </p>
-                    </div>
-                  </div>
-                  <Checkbox
-                    checked={musicEnabled}
-                    onCheckedChange={(c) => setMusicEnabled(c as boolean)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              </Card>
             </div>
           </CollapsibleSection>
         </div>
@@ -1469,7 +1752,7 @@ const GenerateAdContent = () => {
               <Button
                 variant="link"
                 className="w-full mt-2 text-destructive hover:text-destructive/80"
-                onClick={() => router.push("/dashboard/pricing")}
+                onClick={() => router.push("/dashboard/billing")}
               >
                 Get More Credits →
               </Button>
