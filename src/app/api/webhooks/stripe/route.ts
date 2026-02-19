@@ -3,13 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 const PLAN_MAP: Record<string, string> = {
-  // ⚠️ Zamień na swoje prawdziwe Price IDs ze Stripe Dashboard
-  price_starter_monthly_placeholder: "starter",
-  price_starter_yearly_placeholder: "starter",
-  price_pro_monthly_placeholder: "pro",
-  price_pro_yearly_placeholder: "pro",
-  price_scale_monthly_placeholder: "scale",
-  price_scale_yearly_placeholder: "scale",
+  // Starter
+  price_1T2WB5Cm9MZJpse9yE1y7sw2: "starter", // monthly
+  price_1T2WlbCm9MZJpse9q9ZlPw5N: "starter", // yearly
+  // Pro
+  price_1T2WFPCm9MZJpse9vbN0mGFa: "pro", // monthly
+  price_1T2WnXCm9MZJpse9D7tcXiZ7: "pro", // yearly
+  // Scale
+  price_1T2WHFCm9MZJpse9SF11AL1f: "scale", // monthly
+  price_1T2XCZCm9MZJpse9jOy2V7Kw: "scale", // yearly
 };
 
 const CREDITS_MAP: Record<string, number> = {
@@ -60,11 +62,32 @@ export async function POST(req: NextRequest) {
       // ────────────────────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const userId = session.metadata?.userId;
+
+        // Próbuj userId z metadata, jeśli brak — szukaj po emailu (buy.stripe.com)
+        let userId = session.metadata?.userId;
 
         if (!userId) {
-          console.error("checkout.session.completed: brak userId w metadata");
-          break;
+          const customerEmail = session.customer_details?.email;
+          if (!customerEmail) {
+            console.error("checkout.session.completed: brak userId i emaila");
+            break;
+          }
+          const { data: userByEmail } = await supabase
+            .from("users")
+            .select("id")
+            .eq("email", customerEmail)
+            .single();
+
+          if (!userByEmail?.id) {
+            console.error(
+              `checkout.session.completed: nie znaleziono usera dla ${customerEmail}`,
+            );
+            break;
+          }
+          userId = userByEmail.id;
+          console.log(
+            `✅ Znaleziono userId po emailu: ${customerEmail} → ${userId}`,
+          );
         }
 
         const subscriptionId = session.subscription as string;
