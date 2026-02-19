@@ -1,12 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 export async function POST(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Missing Supabase env vars");
+    return NextResponse.json(
+      { error: "Server misconfiguration" },
+      { status: 500 },
+    );
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+
   try {
     const body = await req.json();
     const { project_id, status } = body;
@@ -20,7 +28,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`🔧 Updating project ${project_id} to status: ${status}`);
 
-    // Aktualizuj status projektu w bazie
     const { data, error } = await supabaseAdmin
       .from("projects")
       .update({ status: status })

@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // service role — żeby ominąć RLS
-);
-
 export async function POST(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Missing Supabase env vars");
+    return NextResponse.json(
+      { message: "Server misconfiguration." },
+      { status: 500 },
+    );
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     const { email } = await req.json();
 
@@ -17,7 +25,6 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from("waitlist").insert({ email });
 
     if (error) {
-      // Duplikat — email już na liście
       if (error.code === "23505") {
         return NextResponse.json(
           { message: "You're already on the waitlist!" },
