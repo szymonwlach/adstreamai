@@ -3,13 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 const PLAN_MAP: Record<string, string> = {
-  // Starter
   price_1T2WB5Cm9MZJpse9yE1y7sw2: "starter", // monthly
   price_1T2WlbCm9MZJpse9q9ZlPw5N: "starter", // yearly
-  // Pro
   price_1T2WFPCm9MZJpse9vbN0mGFa: "pro", // monthly
   price_1T2WnXCm9MZJpse9D7tcXiZ7: "pro", // yearly
-  // Scale
   price_1T2WHFCm9MZJpse9SF11AL1f: "scale", // monthly
   price_1T2XCZCm9MZJpse9jOy2V7Kw: "scale", // yearly
 };
@@ -19,6 +16,16 @@ const CREDITS_MAP: Record<string, number> = {
   pro: 750,
   scale: 2000,
 };
+
+// Bezpieczna konwersja timestamp → ISO string
+function safeDate(timestamp: any): string | null {
+  if (!timestamp || isNaN(Number(timestamp))) return null;
+  try {
+    return new Date(Number(timestamp) * 1000).toISOString();
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(req: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -63,7 +70,12 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
-        // Próbuj userId z metadata, jeśli brak — szukaj po emailu (buy.stripe.com)
+        console.log(
+          "📧 customer_details:",
+          JSON.stringify(session.customer_details),
+        );
+        console.log("🔑 metadata:", JSON.stringify(session.metadata));
+
         let userId = session.metadata?.userId;
 
         if (!userId) {
@@ -96,6 +108,11 @@ export async function POST(req: NextRequest) {
         )) as any;
         const priceId = subscription.items.data[0].price.id;
         const plan = PLAN_MAP[priceId] ?? "starter";
+        const periodEnd = safeDate(subscription.current_period_end);
+
+        console.log(
+          `📦 plan=${plan}, priceId=${priceId}, periodEnd=${periodEnd}`,
+        );
 
         const { error: subError } = await supabase.from("subscriptions").upsert(
           {
@@ -104,15 +121,16 @@ export async function POST(req: NextRequest) {
             stripe_customer_id: session.customer as string,
             stripe_price_id: priceId,
             status: "active",
-            current_period_end: new Date(
-              subscription.current_period_end * 1000,
-            ).toISOString(),
+            ...(periodEnd ? { current_period_end: periodEnd } : {}),
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id" },
         );
 
-        if (subError) throw subError;
+        if (subError) {
+          console.error("subError:", subError);
+          throw subError;
+        }
 
         const { error: userError } = await supabase
           .from("users")
@@ -123,7 +141,10 @@ export async function POST(req: NextRequest) {
           })
           .eq("id", userId);
 
-        if (userError) throw userError;
+        if (userError) {
+          console.error("userError:", userError);
+          throw userError;
+        }
 
         console.log(
           `✅ checkout.session.completed: userId=${userId}, plan=${plan}`,
@@ -135,8 +156,14 @@ export async function POST(req: NextRequest) {
       // Odnowienie subskrypcji — odśwież kredyty
       // ────────────────────────────────────────────
       case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subId = (invoice as any).subscription as string | undefined;
+        const invoice = event.data.object as any;
+
+        // Nowy SDK: subId może być w różnych miejscach
+        const subId =
+          invoice.subscription ||
+          invoice.parent?.subscription_details?.subscription;
+
+        console.log(`📄 invoice subId: ${subId}`);
 
         if (!subId) {
           console.log("invoice.payment_succeeded: brak subId, pomijam");
@@ -146,6 +173,7 @@ export async function POST(req: NextRequest) {
         const sub = (await stripe.subscriptions.retrieve(subId)) as any;
         const priceId = sub.items.data[0].price.id;
         const plan = PLAN_MAP[priceId] ?? "starter";
+        const periodEnd = safeDate(sub.current_period_end);
 
         const { data: existingSub, error: findError } = await supabase
           .from("subscriptions")
@@ -165,9 +193,7 @@ export async function POST(req: NextRequest) {
           .update({
             status: "active",
             stripe_price_id: priceId,
-            current_period_end: new Date(
-              sub.current_period_end * 1000,
-            ).toISOString(),
+            ...(periodEnd ? { current_period_end: periodEnd } : {}),
             updated_at: new Date().toISOString(),
           })
           .eq("stripe_subscription_id", subId);
@@ -195,8 +221,10 @@ export async function POST(req: NextRequest) {
       // Nieudana płatność
       // ────────────────────────────────────────────
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subId = (invoice as any).subscription as string | undefined;
+        const invoice = event.data.object as any;
+        const subId =
+          invoice.subscription ||
+          invoice.parent?.subscription_details?.subscription;
 
         if (!subId) break;
 
@@ -218,6 +246,7 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object as any;
         const priceId = sub.items.data[0].price.id;
         const plan = PLAN_MAP[priceId] ?? "starter";
+        const periodEnd = safeDate(sub.current_period_end);
 
         const { data: existingSub, error: findError } = await supabase
           .from("subscriptions")
@@ -231,10 +260,8 @@ export async function POST(req: NextRequest) {
           .from("subscriptions")
           .update({
             stripe_price_id: priceId,
-            status: sub.status as any,
-            current_period_end: new Date(
-              sub.current_period_end * 1000,
-            ).toISOString(),
+            status: sub.status,
+            ...(periodEnd ? { current_period_end: periodEnd } : {}),
             updated_at: new Date().toISOString(),
           })
           .eq("stripe_subscription_id", sub.id);
