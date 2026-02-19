@@ -11,6 +11,7 @@ import {
   Mail,
   User,
   Upload,
+  CreditCard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -62,6 +63,7 @@ export const DashboardNavbar = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const router = useRouter();
 
@@ -116,6 +118,39 @@ export const DashboardNavbar = () => {
     router.push("/");
   };
 
+  // ✅ Stripe Customer Portal
+  const handleManageSubscription = async () => {
+    if (!user) return;
+    setIsOpeningPortal(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user?.id) throw new Error("Not logged in");
+
+      const response = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session.user.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to open portal");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error("Portal error:", error);
+      toast.error(error.message || "Failed to open subscription portal");
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     if (!user) return;
 
@@ -158,7 +193,6 @@ export const DashboardNavbar = () => {
 
     setIsUploading(true);
     try {
-      // Upload to Supabase Storage
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
@@ -169,12 +203,10 @@ export const DashboardNavbar = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(filePath);
 
-      // Update profile with new avatar URL
       const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: {
@@ -327,6 +359,17 @@ export const DashboardNavbar = () => {
                           <User className="w-4 h-4 mr-2" />
                           Edit Profile
                         </DropdownMenuItem>
+                        {/* ✅ Manage Subscription */}
+                        <DropdownMenuItem
+                          onClick={handleManageSubscription}
+                          disabled={isOpeningPortal}
+                          className="cursor-pointer"
+                        >
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          {isOpeningPortal
+                            ? "Opening..."
+                            : "Manage Subscription"}
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <a
                             href="mailto:contact@adstreamai.com"
@@ -463,6 +506,18 @@ export const DashboardNavbar = () => {
                     >
                       <User className="w-4 h-4 mr-2" />
                       Edit Profile
+                    </button>
+                    {/* ✅ Manage Subscription - mobile */}
+                    <button
+                      onClick={() => {
+                        handleManageSubscription();
+                        setMobileMenuOpen(false);
+                      }}
+                      disabled={isOpeningPortal}
+                      className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent/10 transition-colors disabled:opacity-50"
+                    >
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      {isOpeningPortal ? "Opening..." : "Manage Subscription"}
                     </button>
                     <a
                       href="mailto:contact@adstreamai.com"
