@@ -371,7 +371,7 @@
 //   );
 // };
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -386,8 +386,8 @@ import {
   Mail,
   CheckCircle2,
 } from "lucide-react";
-import { createClient } from "@supabase/supabase-js";
-import { WAITLIST_MODE } from "@/lib/config"; // ← jedna flaga dla całej apki
+import { supabase } from "@/integrations/supabase/client"; // ✅ singleton
+import { WAITLIST_MODE } from "@/lib/config";
 
 // ============================================================
 // WAITLIST MODAL
@@ -404,13 +404,6 @@ const WaitlistModal = ({
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMsg, setErrorMsg] = useState("");
-
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -520,8 +513,8 @@ const WaitlistModal = ({
                   </>
                 ) : (
                   <>
-                    Join Waitlist
                     <ArrowRight className="w-4 h-4" />
+                    Join Waitlist
                   </>
                 )}
               </button>
@@ -548,7 +541,6 @@ const tiers = [
     yearlyPrice: "24",
     yearlyPromoPrice: "16",
     credits: "300",
-    // valueIndicator: "Enough for ~20 basic ads",
     stripeMonthlyPriceId: "price_1T2WB5Cm9MZJpse9yE1y7sw2",
     stripeYearlyPriceId: "price_1T2WlbCm9MZJpse9q9ZlPw5N",
     features: [
@@ -556,7 +548,6 @@ const tiers = [
       "UGC & Educational AI styles",
       "YouTube & TikTok auto-posting",
       "Copy-paste ready captions",
-      // "Basic analytics",
       "Email support",
       "No Watermark",
     ],
@@ -571,14 +562,12 @@ const tiers = [
     yearlyPrice: "66",
     yearlyPromoPrice: "49",
     credits: "750",
-    // valueIndicator: "Enough for ~50 professional ads",
     stripeMonthlyPriceId: "price_1T2WFPCm9MZJpse9vbN0mGFa",
     stripeYearlyPriceId: "price_1T2WnXCm9MZJpse9D7tcXiZ7",
     features: [
       "750 video credits/month",
       "All AI styles (UGC, Trend, Educational)",
       "YouTube & TikTok auto-posting",
-      // "Smart scheduling (7 days ahead)",
       "Copy-paste ready captions",
       "Priority support",
       "No Watermark",
@@ -594,14 +583,12 @@ const tiers = [
     yearlyPrice: "124",
     yearlyPromoPrice: "99",
     credits: "2000",
-    // valueIndicator: "Enough for ~130 enterprise ads",
     stripeMonthlyPriceId: "price_1T2WHFCm9MZJpse9SF11AL1f",
     stripeYearlyPriceId: "price_1T2XCZCm9MZJpse9jOy2V7Kw",
     features: [
       "2000 video credits/month",
       "All AI styles + priority queue",
       "YouTube & TikTok auto-posting",
-      // "Advanced scheduling (30 days ahead)",
       "Copy-paste ready captions (all platforms)",
       "Bulk video upload & generation",
       "Priority support",
@@ -615,27 +602,15 @@ const tiers = [
 // ============================================================
 // PRICING
 // ============================================================
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
 export const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
-
   const router = useRouter();
   const pathname = usePathname();
   const isDashboard = pathname.startsWith("/dashboard");
 
   const handleClick = async (tier: (typeof tiers)[0]) => {
-    console.log(
-      "handleClick fired!",
-      tier.name,
-      "WAITLIST_MODE:",
-      WAITLIST_MODE,
-    );
-    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
     if (WAITLIST_MODE) {
       setWaitlistOpen(true);
       return;
@@ -650,7 +625,7 @@ export const Pricing = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      console.log("Session result:", session?.user?.email ?? "BRAK SESJI");
+
       if (!session) {
         localStorage.setItem(
           "pendingCheckout",
@@ -667,7 +642,6 @@ export const Pricing = () => {
       });
 
       const data = await response.json();
-      console.log("Checkout response:", response.status, data);
 
       if (!response.ok) {
         throw new Error(data?.message || "Failed to create checkout session");
@@ -844,17 +818,12 @@ export const Pricing = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex justify-center">
-                          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-                            <span className="text-sm font-bold text-primary">
-                              {tier.credits} credits
-                            </span>
-                          </div>
+                      <div className="flex justify-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+                          <span className="text-sm font-bold text-primary">
+                            {tier.credits} credits
+                          </span>
                         </div>
-                        {/* <p className="text-xs text-center text-muted-foreground font-medium">
-                          {tier.valueIndicator}
-                       </p> */}
                       </div>
                     </div>
 
@@ -871,13 +840,11 @@ export const Pricing = () => {
                           Processing...
                         </>
                       ) : WAITLIST_MODE ? (
-                        // 👇 WAITLIST MODE — inny tekst przycisku
                         <>
                           Join Waitlist
                           <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </>
                       ) : (
-                        // 👇 NORMAL MODE
                         <>
                           Claim This Deal
                           <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
