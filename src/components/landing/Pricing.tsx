@@ -628,18 +628,17 @@ export const Pricing = () => {
   const isDashboard = pathname.startsWith("/dashboard");
 
   const handleClick = async (tier: (typeof tiers)[0]) => {
-    // 👇 WAITLIST MODE — otwiera modal zamiast checkout
     if (WAITLIST_MODE) {
       setWaitlistOpen(true);
       return;
     }
 
-    // 👇 NORMAL MODE — oryginalny flow Stripe
     setLoadingTier(tier.name);
     try {
       const priceId = isYearly
         ? tier.stripeYearlyPriceId
         : tier.stripeMonthlyPriceId;
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -650,20 +649,30 @@ export const Pricing = () => {
           JSON.stringify({ priceId, tierName: tier.name, isYearly }),
         );
         router.push("/auth");
-      } else {
-        const response = await fetch("/api/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ priceId, userId: session.user.id }),
-        });
-        if (!response.ok) throw new Error("Failed to create checkout session");
-        const { url } = await response.json();
-        if (url) window.location.href = url;
-        else throw new Error("No checkout URL returned");
+        return;
       }
-    } catch (error) {
+
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, userId: session.user.id }),
+      });
+
+      const data = await response.json();
+      console.log("Checkout response:", response.status, data);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to create checkout session");
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      alert("Something went wrong. Please try again.");
+      alert(error.message || "Something went wrong. Please try again.");
     } finally {
       setLoadingTier(null);
     }
