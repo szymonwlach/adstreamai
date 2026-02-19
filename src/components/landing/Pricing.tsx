@@ -628,6 +628,12 @@ export const Pricing = () => {
   const isDashboard = pathname.startsWith("/dashboard");
 
   const handleClick = async (tier: (typeof tiers)[0]) => {
+    console.log(
+      "handleClick fired!",
+      tier.name,
+      "WAITLIST_MODE:",
+      WAITLIST_MODE,
+    );
     if (WAITLIST_MODE) {
       setWaitlistOpen(true);
       return;
