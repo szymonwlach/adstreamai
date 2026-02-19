@@ -553,6 +553,10 @@ const tiers = [
     ],
     popular: false,
     discount: "35%",
+    stripeMonthlyUrl:
+      "https://buy.stripe.com/test_eVqcN4eLe3ESdvo32Cd7q00?prefilled_promo_code=STARTER10",
+    stripeYearlyUrl:
+      "https://buy.stripe.com/test_8x26oG46A5N03UOgTsd7q03?prefilled_promo_code=STARTERYEARLY", // twój link yearly
   },
   {
     name: "Pro",
@@ -574,6 +578,10 @@ const tiers = [
     ],
     popular: true,
     discount: "25%",
+    stripeMonthlyUrl:
+      "https://buy.stripe.com/test_dRm8wO32wdfs62WfPod7q01?prefilled_promo_code=PRO20",
+    stripeYearlyUrl:
+      "https://buy.stripe.com/test_7sYdR8bz25N09f8av4d7q04?prefilled_promo_code=PROYEARLY", // twój link yearly
   },
   {
     name: "Scale",
@@ -596,6 +604,10 @@ const tiers = [
     ],
     popular: false,
     discount: "20%",
+    stripeMonthlyUrl:
+      "https://buy.stripe.com/test_cNieVc0Uo2AOfDwdHgd7q02?prefilled_promo_code=SCALE30",
+    stripeYearlyUrl:
+      "https://buy.stripe.com/test_eVq6oGeLe8Zcdvo1Yyd7q05?prefilled_promo_code=SCALEYEARLY", // twój link yearly
   },
 ];
 
@@ -616,48 +628,8 @@ export const Pricing = () => {
       return;
     }
 
-    setLoadingTier(tier.name);
-    try {
-      const priceId = isYearly
-        ? tier.stripeYearlyPriceId
-        : tier.stripeMonthlyPriceId;
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) {
-        localStorage.setItem(
-          "pendingCheckout",
-          JSON.stringify({ priceId, tierName: tier.name, isYearly }),
-        );
-        router.push("/auth");
-        return;
-      }
-
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId, userId: session.user.id }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to create checkout session");
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (error: any) {
-      console.error("Checkout error:", error);
-      alert(error.message || "Something went wrong. Please try again.");
-    } finally {
-      setLoadingTier(null);
-    }
+    const url = isYearly ? tier.stripeYearlyUrl : tier.stripeMonthlyUrl;
+    window.location.href = url;
   };
 
   return (
