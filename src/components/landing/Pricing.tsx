@@ -615,15 +615,15 @@ const tiers = [
 // ============================================================
 // PRICING
 // ============================================================
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 export const Pricing = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
   const router = useRouter();
   const pathname = usePathname();
   const isDashboard = pathname.startsWith("/dashboard");
@@ -650,7 +650,7 @@ export const Pricing = () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
+      console.log("Session result:", session?.user?.email ?? "BRAK SESJI");
       if (!session) {
         localStorage.setItem(
           "pendingCheckout",
