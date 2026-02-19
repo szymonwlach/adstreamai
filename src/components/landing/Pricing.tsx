@@ -549,8 +549,8 @@ const tiers = [
     yearlyPromoPrice: "16",
     credits: "300",
     // valueIndicator: "Enough for ~20 basic ads",
-    stripeMonthlyPriceId: "price_starter_monthly_placeholder",
-    stripeYearlyPriceId: "price_starter_yearly_placeholder",
+    stripeMonthlyPriceId: "price_1T2WB5Cm9MZJpse9yE1y7sw2",
+    stripeYearlyPriceId: "price_1T2WlbCm9MZJpse9q9ZlPw5N",
     features: [
       "300 video credits/month",
       "UGC & Educational AI styles",
@@ -572,8 +572,8 @@ const tiers = [
     yearlyPromoPrice: "49",
     credits: "750",
     // valueIndicator: "Enough for ~50 professional ads",
-    stripeMonthlyPriceId: "price_pro_monthly_placeholder",
-    stripeYearlyPriceId: "price_pro_yearly_placeholder",
+    stripeMonthlyPriceId: "price_1T2WFPCm9MZJpse9vbN0mGFa",
+    stripeYearlyPriceId: "price_1T2WnXCm9MZJpse9D7tcXiZ7",
     features: [
       "750 video credits/month",
       "All AI styles (UGC, Trend, Educational)",
@@ -595,8 +595,8 @@ const tiers = [
     yearlyPromoPrice: "99",
     credits: "2000",
     // valueIndicator: "Enough for ~130 enterprise ads",
-    stripeMonthlyPriceId: "price_scale_monthly_placeholder",
-    stripeYearlyPriceId: "price_scale_yearly_placeholder",
+    stripeMonthlyPriceId: "price_1T2WHFCm9MZJpse9SF11AL1f",
+    stripeYearlyPriceId: "price_1T2XCZCm9MZJpse9jOy2V7Kw",
     features: [
       "2000 video credits/month",
       "All AI styles + priority queue",
