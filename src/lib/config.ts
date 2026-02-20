@@ -1,1 +1,1 @@
-export const WAITLIST_MODE = false;
+export const WAITLIST_MODE = true;
