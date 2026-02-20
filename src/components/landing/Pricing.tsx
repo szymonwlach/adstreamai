@@ -628,7 +628,18 @@ export const Pricing = () => {
       return;
     }
 
-    const url = isYearly ? tier.stripeYearlyUrl : tier.stripeMonthlyUrl;
+    const baseUrl = isYearly ? tier.stripeYearlyUrl : tier.stripeMonthlyUrl;
+
+    // Pobierz email zalogowanego usera
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const email = session?.user?.email;
+
+    const url = email
+      ? `${baseUrl}&prefilled_email=${encodeURIComponent(email)}`
+      : baseUrl;
+
     window.location.href = url;
   };
 
