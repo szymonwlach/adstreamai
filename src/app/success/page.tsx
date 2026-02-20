@@ -166,7 +166,7 @@ export default function SuccessPage() {
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => router.push("/dashboard/generate")}
+              onClick={() => router.push("/dashboard/my-ads")}
               className="flex-1 py-3.5 px-6 rounded-xl bg-gradient-to-r from-primary to-accent text-white font-bold text-sm shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-95 transition-all"
             >
               🚀 Start Generating
