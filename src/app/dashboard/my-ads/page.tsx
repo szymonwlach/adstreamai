@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -78,6 +78,10 @@ const MyContent = () => {
   >({});
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // ==================== TRACK WHICH FAILED IDs ALREADY GOT A TOAST ====================
+  // Stores Set of project IDs that have already triggered a "failed" toast
+  const shownFailedToastsRef = useRef<Set<string>>(new Set());
 
   const styleMapping: Record<
     string,
@@ -199,7 +203,6 @@ const MyContent = () => {
     return icons[index % icons.length];
   };
 
-  // ==================== GET VIDEOS — SORTED NEWEST FIRST ====================
   const getVideosFromCampaign = (campaign: Campaign): Video[] => {
     let videos: Video[] = [];
 
@@ -222,7 +225,6 @@ const MyContent = () => {
       });
     }
 
-    // ✅ Sort newest first
     return videos.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -342,6 +344,8 @@ const MyContent = () => {
         customClass: { popup: "rounded-xl border border-green-500/30" },
       });
 
+      // Remove from shownFailedToastsRef so if it gets recreated it can toast again
+      shownFailedToastsRef.current.delete(projectId);
       fetchCampaigns(false);
     } catch (error: any) {
       toast.dismiss("delete-toast");
@@ -397,7 +401,6 @@ const MyContent = () => {
       });
 
       const data = await response.json();
-
       if (!response.ok)
         throw new Error(data.error || "Failed to delete campaign");
 
@@ -546,29 +549,35 @@ const MyContent = () => {
     };
   }, []);
 
+  // ==================== FAILED TOAST — show ONCE per unique failed project ====================
   useEffect(() => {
-    const failedCount = campaigns.reduce((sum, c) => {
-      return (
-        sum +
-        (c.projects || []).filter((p: any) => p.status === "failed").length
-      );
-    }, 0);
+    if (loading) return;
 
-    if (failedCount > 0 && !loading) {
-      toast.error(
-        `⚠️ ${failedCount} video${failedCount > 1 ? "s" : ""} failed to generate! Please check your campaigns and retry.`,
-        {
-          duration: 8000,
-          style: {
-            background: "#991b1b",
-            color: "white",
-            border: "2px solid #ef4444",
-            fontSize: "16px",
-            fontWeight: "bold",
-          },
-        },
+    campaigns.forEach((campaign) => {
+      const failedProjects = (campaign.projects || []).filter(
+        (p: any) => p.status === "failed",
       );
-    }
+
+      failedProjects.forEach((project: any) => {
+        // Only show toast if we haven't shown it for this project ID yet
+        if (!shownFailedToastsRef.current.has(project.id)) {
+          shownFailedToastsRef.current.add(project.id);
+          toast.error(
+            `⚠️ 1 video failed to generate! Please check your campaigns and retry.`,
+            {
+              duration: 8000,
+              style: {
+                background: "#991b1b",
+                color: "white",
+                border: "2px solid #ef4444",
+                fontSize: "16px",
+                fontWeight: "bold",
+              },
+            },
+          );
+        }
+      });
+    });
   }, [campaigns, loading]);
 
   // ==================== TIMEOUT CHECK ====================
@@ -769,9 +778,14 @@ const MyContent = () => {
       );
       localStorage.setItem(`retry_at_${video.project_id}`, retryNow.toString());
 
+      // Allow toast to show again if it fails again
+      shownFailedToastsRef.current.delete(video.project_id);
+
       toast.success(
         "✅ Video generation restarted! It will be ready in 2-4 minutes.",
-        { duration: 5000 },
+        {
+          duration: 5000,
+        },
       );
       setTimeout(() => fetchCampaigns(false), 2000);
     } catch (error: any) {
@@ -808,9 +822,14 @@ const MyContent = () => {
       );
       localStorage.setItem(`retry_at_${project.id}`, retryNow.toString());
 
+      // Allow toast to show again if it fails again after retry
+      shownFailedToastsRef.current.delete(project.id);
+
       toast.success(
         "✅ Video generation restarted! It will be ready in 2-4 minutes.",
-        { duration: 5000 },
+        {
+          duration: 5000,
+        },
       );
       setTimeout(() => fetchCampaigns(false), 2000);
     } catch (error: any) {
@@ -1461,7 +1480,7 @@ const MyContent = () => {
                       </div>
                     )}
 
-                    {/* Ready Videos — newest first */}
+                    {/* Ready Videos */}
                     {campaignVideos.length > 0 && (
                       <div>
                         <h4 className="text-white font-semibold mb-3">
@@ -1611,7 +1630,6 @@ const MyContent = () => {
                                           <Eye className="w-3 h-3 mr-1" />
                                           Preview
                                         </Button>
-                                        {/* ✅ DOWNLOAD BUTTON */}
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -1805,7 +1823,6 @@ const MyContent = () => {
               </Button>
               {previewVideo.video_url && (
                 <>
-                  {/* ✅ DOWNLOAD IN MODAL */}
                   <Button
                     variant="outline"
                     className="border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300"
