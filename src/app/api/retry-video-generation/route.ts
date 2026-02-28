@@ -92,7 +92,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. Przygotuj payload — taki sam format jak generateAd wysyła do sendToN8n
+    // 5. Pobierz plan usera z tabeli users
+    const { data: userData } = await supabase
+      .from("users")
+      .select("plan")
+      .eq("id", userId)
+      .single();
+
+    const userPlan = userData?.plan ?? "free";
+    console.log("👤 User plan:", userPlan);
+
+    // 6. Przygotuj payload — taki sam format jak generateAd wysyła do sendToN8n
     const n8nPayload = {
       project_id: projectId,
       campaign_id: project.campaign_id ?? null,
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest) {
       language: project.language ?? "English",
       quality: project.quality ?? "720p",
       duration: project.duration ?? 10,
-      plan: "free",
+      plan: userPlan,
       tone_of_voice: project.tone_of_voice ?? "casual",
       custom_hook: project.custom_hook ?? null,
       call_to_action: project.call_to_action ?? null,
@@ -115,7 +125,7 @@ export async function POST(request: NextRequest) {
       JSON.stringify(n8nPayload, null, 2),
     );
 
-    // 6. ✅ POPRAWKA: origin pobieramy z request.url zamiast hardkodować
+    // 7. ✅ POPRAWKA: origin pobieramy z request.url zamiast hardkodować
     //    Na Vercelu zwraca: https://adstreamai.com
     //    Na localhost zwraca: http://localhost:3000
     const { origin } = new URL(request.url);
