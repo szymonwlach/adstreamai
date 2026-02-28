@@ -30,6 +30,7 @@ import {
   Monitor,
   Clock,
   Lock,
+  LockOpen,
   Zap,
   CircleChevronLeft,
   Target,
@@ -43,6 +44,7 @@ import {
   Briefcase,
   Gem,
   PartyPopper,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -231,6 +233,11 @@ const HOOK_SUGGESTIONS = [
   "This solved my biggest problem",
 ];
 
+// ==================== WORD COUNT HELPER ====================
+const countWords = (text: string): number => {
+  return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+};
+
 // ==================== COLLAPSIBLE SECTION ====================
 const CollapsibleSection = ({
   id,
@@ -240,6 +247,7 @@ const CollapsibleSection = ({
   badge,
   expandedSection,
   setExpandedSection,
+  lockButton,
 }: {
   id: string;
   title: string;
@@ -248,6 +256,7 @@ const CollapsibleSection = ({
   badge?: string;
   expandedSection: string | null;
   setExpandedSection: (id: string | null) => void;
+  lockButton?: React.ReactNode;
 }) => {
   const isExpanded = expandedSection === id;
 
@@ -266,11 +275,14 @@ const CollapsibleSection = ({
             )}
           </div>
         </div>
-        <ChevronDown
-          className={`w-5 h-5 text-muted-foreground transition-transform ${
-            isExpanded ? "rotate-180" : ""
-          }`}
-        />
+        <div className="flex items-center gap-2">
+          {lockButton}
+          <ChevronDown
+            className={`w-5 h-5 text-muted-foreground transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          />
+        </div>
       </div>
 
       {isExpanded && (
@@ -279,6 +291,37 @@ const CollapsibleSection = ({
         </div>
       )}
     </Card>
+  );
+};
+
+// ==================== WORD COUNT BADGE ====================
+const WordCountBadge = ({
+  text,
+  max,
+  label,
+}: {
+  text: string;
+  max: number;
+  label: string;
+}) => {
+  const count = countWords(text);
+  const isOver = count > max;
+  const isNearLimit = count >= max - 1 && count <= max;
+
+  if (count === 0) return null;
+
+  return (
+    <span
+      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+        isOver
+          ? "bg-destructive/15 text-destructive"
+          : isNearLimit
+            ? "bg-amber-500/15 text-amber-600"
+            : "bg-green-500/15 text-green-600"
+      }`}
+    >
+      {count}/{max} words {isOver ? "⚠️ too long" : "✓"}
+    </span>
   );
 };
 
@@ -297,20 +340,24 @@ const GenerateAdContent = () => {
   const [selectedLanguage, setSelectedLanguage] = useState("en");
   const [selectedQuality, setSelectedQuality] = useState<QualityType>("720p");
   const [selectedDuration, setSelectedDuration] = useState<DurationType>(10);
+
+  // ==================== DYNAMIC WORD LIMITS ====================
+  const hookMaxWords = selectedDuration === 15 ? 15 : 10;
+  const ctaMaxWords = selectedDuration === 15 ? 7 : 5;
   const [userCredits, setUserCredits] = useState(0);
   const [userPlan, setUserPlan] = useState<UserPlan | null>(null);
   const [isPrefillingFromCampaign, setIsPrefillingFromCampaign] =
     useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [hoveredStyle, setHoveredStyle] = useState<string | null>(null);
 
   // ==================== CREATIVE CONTROLS ====================
   const [selectedTone, setSelectedTone] = useState<string>("casual");
   const [customHook, setCustomHook] = useState("");
-  const [keyMessage, setKeyMessage] = useState("");
   const [callToAction, setCallToAction] = useState("");
-  const [targetAudience, setTargetAudience] = useState("");
-  const [keySellingPoints, setKeySellingPoints] = useState("");
+
+  // ==================== CREATIVE CONTROLS LOCK ====================
+  const [creativeControlsLocked, setCreativeControlsLocked] = useState(false);
+  const [isTogglingLock, setIsTogglingLock] = useState(false);
 
   // ==================== VIDEO ENHANCEMENTS ====================
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
@@ -338,7 +385,6 @@ const GenerateAdContent = () => {
   ];
 
   const videoStyles = [
-    // FREE STYLES
     {
       id: "ugc",
       name: "UGC Style",
@@ -375,8 +421,6 @@ const GenerateAdContent = () => {
       category: "organic",
       previewVideo: "/previews_video/educational.mp4",
     },
-
-    // PREMIUM STYLES
     {
       id: "cinematic_luxury",
       name: "Cinematic Luxury",
@@ -474,10 +518,7 @@ const GenerateAdContent = () => {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session?.user?.id) {
-        console.error("No user session found");
-        return;
-      }
+      if (!session?.user?.id) return;
 
       const response = await fetch("/api/getPlan", {
         method: "POST",
@@ -486,9 +527,6 @@ const GenerateAdContent = () => {
       });
 
       const data = await response.json();
-
-      console.log("✅ User plan loaded:", data);
-
       setUserPlan(data);
       setUserCredits(data.credits || 0);
     } catch (error) {
@@ -497,6 +535,54 @@ const GenerateAdContent = () => {
       setUserCredits(0);
     }
   };
+
+  // ==================== TOGGLE CREATIVE CONTROLS LOCK ====================
+  const toggleCreativeLock = useCallback(async () => {
+    const newLockState = !creativeControlsLocked;
+
+    if (!campaignId) {
+      setCreativeControlsLocked(newLockState);
+      toast.success(
+        newLockState
+          ? "🔒 Creative Controls locked — will be saved when you generate"
+          : "🔓 Creative Controls unlocked",
+      );
+      return;
+    }
+
+    setIsTogglingLock(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const response = await fetch("/api/updateCampaign", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaign_id: campaignId,
+          user_id: session?.user.id,
+          creative_controls_locked: newLockState,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update campaign");
+
+      setCreativeControlsLocked(newLockState);
+
+      toast.success(
+        newLockState
+          ? "🔒 Creative Controls locked — these settings will be reused next time"
+          : "🔓 Creative Controls unlocked — AI will decide on its own next time",
+      );
+    } catch (error) {
+      console.error("❌ Failed to toggle lock:", error);
+      toast.error("Failed to save lock state");
+    } finally {
+      setIsTogglingLock(false);
+    }
+  }, [campaignId, creativeControlsLocked]);
 
   // ==================== PREFILL FROM CAMPAIGN ====================
   useEffect(() => {
@@ -512,7 +598,6 @@ const GenerateAdContent = () => {
           data: { session },
         } = await supabase.auth.getSession();
 
-        // 1️⃣ Pobierz podstawowe dane kampanii
         const campaignResponse = await fetch(
           `/api/getCampaigns?user_id=${session?.user.id}`,
         );
@@ -526,14 +611,16 @@ const GenerateAdContent = () => {
           return;
         }
 
-        // 2️⃣ Pobierz ostatni projekt z tej kampanii, żeby skopiować ustawienia
+        const isLocked = campaign.creative_controls_locked ?? false;
+        setCreativeControlsLocked(isLocked);
+
         const projectResponse = await fetch(
           `/api/getProjects?campaign_id=${campaignId}&user_id=${session?.user.id}`,
         );
         const projectData = await projectResponse.json();
-        const lastProject = projectData.projects?.[0]; // Najnowszy projekt
+        const lastProject = projectData.projects?.[0];
 
-        // 3️⃣ Wypełnij podstawowe dane z kampanii
+        // Product info always prefills from campaign
         setCampaignName(campaign.name || "");
         let images: string[] = [];
         if (campaign.product_image_url) {
@@ -550,47 +637,37 @@ const GenerateAdContent = () => {
         setProductImages(images);
         setDescription(campaign.description || "");
 
-        // 4️⃣ Jeśli istnieje projekt, wypełnij WSZYSTKIE ustawienia z niego
         if (lastProject) {
-          console.log("📋 Loading settings from last project:", lastProject);
-
-          // Video Settings
           if (lastProject.language) setSelectedLanguage(lastProject.language);
           if (lastProject.quality)
             setSelectedQuality(lastProject.quality as QualityType);
           if (lastProject.duration)
             setSelectedDuration(lastProject.duration as DurationType);
-
-          // Video Enhancements
-          if (lastProject.subtitles_enabled !== undefined) {
+          if (lastProject.subtitles_enabled !== undefined)
             setSubtitlesEnabled(lastProject.subtitles_enabled);
-          }
           if (lastProject.subtitle_style)
             setSubtitleStyle(lastProject.subtitle_style);
           if (lastProject.color_scheme)
             setColorScheme(lastProject.color_scheme);
-          if (lastProject.music_enabled !== undefined) {
+          if (lastProject.music_enabled !== undefined)
             setMusicEnabled(lastProject.music_enabled);
-          }
-
-          // Creative Controls
-          if (lastProject.tone_of_voice)
-            setSelectedTone(lastProject.tone_of_voice);
-          if (lastProject.custom_hook) setCustomHook(lastProject.custom_hook);
-          if (lastProject.key_message) setKeyMessage(lastProject.key_message);
-          if (lastProject.call_to_action)
-            setCallToAction(lastProject.call_to_action);
-          if (lastProject.target_audience)
-            setTargetAudience(lastProject.target_audience);
-          if (lastProject.key_selling_points)
-            setKeySellingPoints(lastProject.key_selling_points);
-
-          // Selected Styles
-          if (lastProject.selected_styles?.length > 0) {
+          if (lastProject.selected_styles?.length > 0)
             setSelectedStyles(lastProject.selected_styles);
+
+          // Creative Controls — only prefill if locked
+          if (isLocked) {
+            if (lastProject.tone_of_voice)
+              setSelectedTone(lastProject.tone_of_voice);
+            if (lastProject.custom_hook) setCustomHook(lastProject.custom_hook);
+            if (lastProject.call_to_action)
+              setCallToAction(lastProject.call_to_action);
           }
 
-          toast.success("Campaign settings loaded from previous generation!");
+          toast.success(
+            isLocked
+              ? "Campaign loaded • Creative Controls loaded from previous ad"
+              : "Campaign loaded • Creative Controls empty (AI will decide)",
+          );
         } else {
           toast.success("Campaign loaded!");
         }
@@ -622,7 +699,6 @@ const GenerateAdContent = () => {
       });
       return;
     }
-
     if (qualityId === "ultra" && !canUseUltra) {
       toast.warning("Premium Feature", {
         description: "Upgrade to Pro to unlock Ultra 4K quality!",
@@ -634,7 +710,6 @@ const GenerateAdContent = () => {
       });
       return;
     }
-
     setSelectedQuality(qualityId as QualityType);
   };
 
@@ -651,11 +726,10 @@ const GenerateAdContent = () => {
       });
       return;
     }
-
     setSelectedDuration(duration as DurationType);
   };
 
-  // ==================== STYLE TOGGLE - MULTI SELECT ====================
+  // ==================== STYLE TOGGLE ====================
   const toggleStyle = useCallback(
     (styleId: string, isPremium: boolean) => {
       if (isPremium && isFreeUser) {
@@ -669,7 +743,6 @@ const GenerateAdContent = () => {
         });
         return;
       }
-
       setSelectedStyles((prev) =>
         prev.includes(styleId)
           ? prev.filter((id) => id !== styleId)
@@ -707,9 +780,7 @@ const GenerateAdContent = () => {
         reader.readAsDataURL(file);
 
         const fileExt = file.name.split(".").pop();
-        const fileName = `${Math.random()
-          .toString(36)
-          .substring(2)}.${fileExt}`;
+        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
         const filePath = `${session.user.id}/${fileName}`;
 
         const { data, error } = await supabase.storage
@@ -726,7 +797,6 @@ const GenerateAdContent = () => {
       }
 
       setProductImages((prev) => {
-        const previews = prev.slice(-files.length);
         const withoutPreviews = prev.slice(0, -files.length);
         return [...withoutPreviews, ...uploadedUrls];
       });
@@ -760,17 +830,14 @@ const GenerateAdContent = () => {
       toast.error("Please log in to generate ads");
       return;
     }
-
     if (productImages.length === 0) {
       toast.error("Please upload at least one product image");
       return;
     }
-
     if (selectedStyles.length === 0) {
       toast.error("Please select at least one video style");
       return;
     }
-
     if (!hasEnoughCredits) {
       toast.error("Insufficient Credits", {
         description: `You need ${estimatedCost - userCredits} more credits`,
@@ -793,21 +860,12 @@ const GenerateAdContent = () => {
         quality: selectedQuality,
         duration: selectedDuration,
         campaign_id: campaignId && campaignId.trim() !== "" ? campaignId : null,
-        // ⚠️ SUBTITLE & MUSIC - DISABLED
-        // subtitles_enabled: subtitlesEnabled,
-        // subtitle_style: subtitleStyle,
-        // music_enabled: musicEnabled,
-        // color_scheme: colorScheme,
         estimated_cost: estimatedCost,
         tone_of_voice: selectedTone,
         custom_hook: customHook.trim() || null,
-        key_message: keyMessage.trim() || null,
         call_to_action: callToAction.trim() || null,
-        target_audience: targetAudience.trim() || null,
-        key_selling_points: keySellingPoints.trim() || null,
       };
 
-      console.log("📤 Saving projects to database...");
       const saveResponse = await fetch("/api/saveAd", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -824,24 +882,34 @@ const GenerateAdContent = () => {
       const { projectIds, campaignId: newCampaignId } =
         await saveResponse.json();
 
-      console.log("✅ Created projects:", projectIds);
-      console.log("🎯 Campaign ID:", newCampaignId);
+      if (creativeControlsLocked && newCampaignId && !campaignId) {
+        try {
+          const {
+            data: { session: lockSession },
+          } = await supabase.auth.getSession();
+          await fetch("/api/updateCampaign", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              campaign_id: newCampaignId,
+              user_id: lockSession?.user.id,
+              creative_controls_locked: true,
+            }),
+          });
+        } catch (e) {
+          console.error("Failed to save lock state:", e);
+        }
+      }
 
       const costPerVideo = calculateCost(selectedQuality, selectedDuration);
       const successfulProjects = [];
       const failedProjects = [];
-
-      // ✅ FIXED: Helper function to add delay between requests
       const delay = (ms: number) =>
         new Promise((resolve) => setTimeout(resolve, ms));
 
       for (let i = 0; i < projectIds.length; i++) {
         const projectId = projectIds[i];
         const style = selectedStyles[i];
-
-        console.log(
-          `📤 [${i + 1}/${projectIds.length}] Sending project ${projectId} (style: ${style}) to n8n...`,
-        );
 
         const n8nPayload = {
           project_id: projectId,
@@ -857,24 +925,11 @@ const GenerateAdContent = () => {
             "English",
           quality: selectedQuality,
           duration: selectedDuration,
-          // ⚠️ SUBTITLE & MUSIC - DISABLED
-          // subtitles_enabled: subtitlesEnabled,
-          // subtitle_style: subtitlesEnabled ? subtitleStyle : null,
-          // color_scheme: subtitlesEnabled ? colorScheme : null,
-          // music_enabled: musicEnabled,
           estimated_cost: costPerVideo,
           tone_of_voice: selectedTone,
           custom_hook: customHook.trim() || null,
-          key_message: keyMessage.trim() || null,
           call_to_action: callToAction.trim() || null,
-          target_audience: targetAudience.trim() || null,
-          key_selling_points: keySellingPoints.trim() || null,
         };
-
-        console.log(
-          `📦 Payload for project ${projectId}:`,
-          JSON.stringify(n8nPayload, null, 2),
-        );
 
         try {
           const n8nResponse = await fetch("/api/sendToN8n", {
@@ -884,45 +939,23 @@ const GenerateAdContent = () => {
           });
 
           const responseText = await n8nResponse.text();
-          console.log(`📄 n8n Raw response for ${projectId}:`, responseText);
-
           let n8nData;
           try {
             n8nData = JSON.parse(responseText);
-          } catch (parseError) {
-            console.error(
-              `❌ Failed to parse n8n response as JSON for ${projectId}`,
-            );
-            console.error("Response was:", responseText);
+          } catch {
             throw new Error(
               `Invalid JSON response from n8n: ${responseText.substring(0, 100)}`,
             );
           }
 
           if (!n8nResponse.ok) {
-            // ✅ FIXED: Corrected console.error syntax
-            console.error(`❌ Failed to send project ${projectId} to n8n`);
-            console.error("Status:", n8nResponse.status);
-            console.error("Error details:", n8nData);
             failedProjects.push({ projectId, style, error: n8nData });
             continue;
           }
 
-          console.log(`✅ Project ${projectId} sent to n8n successfully`);
-          console.log("Response:", n8nData);
           successfulProjects.push({ projectId, style });
-
-          // ✅ FIXED: Add delay between requests to avoid race conditions
-          if (i < projectIds.length - 1) {
-            console.log(`⏳ Waiting 500ms before next request...`);
-            await delay(500);
-          }
+          if (i < projectIds.length - 1) await delay(500);
         } catch (error) {
-          console.error(`❌ Error sending project ${projectId}:`, error);
-          console.error(
-            "Error type:",
-            error instanceof Error ? error.message : typeof error,
-          );
           failedProjects.push({
             projectId,
             style,
@@ -932,20 +965,9 @@ const GenerateAdContent = () => {
         }
       }
 
-      console.log("📊 Generation Summary:");
-      console.log(
-        `  ✅ Successful: ${successfulProjects.length}/${projectIds.length}`,
-      );
-      console.log(`  ❌ Failed: ${failedProjects.length}/${projectIds.length}`);
-
-      // ✅ POBIERZ KREDYTY TYLKO ZA UDANE PROJEKTY
       if (successfulProjects.length > 0) {
         const totalCost = costPerVideo * successfulProjects.length;
         const successfulProjectIds = successfulProjects.map((p) => p.projectId);
-
-        console.log(
-          `💳 Deducting ${totalCost} credits for ${successfulProjects.length} successful videos...`,
-        );
 
         try {
           const deductResponse = await fetch("/api/deductCredits", {
@@ -961,33 +983,18 @@ const GenerateAdContent = () => {
           const deductData = await deductResponse.json();
 
           if (!deductResponse.ok) {
-            console.error("❌ Failed to deduct credits:", deductData);
             toast.error("Credits deduction failed", {
               description: "Please contact support",
             });
           } else {
-            console.log(
-              `✅ Credits deducted. New balance: ${deductData.new_credits}`,
-            );
-
-            // Zaktualizuj stan kredytów w UI
             setUserCredits(deductData.new_credits);
-
             toast.success(
               `${successfulProjects.length} ad${successfulProjects.length !== 1 ? "s" : ""} ${
                 campaignId ? "added to campaign" : "campaign created"
               }!`,
-              // {
-              //   description:
-              //     `${totalCost} credits used. New balance: ${deductData.new_credits}` +
-              //     (failedProjects.length > 0
-              //       ? ` • ${failedProjects.length} ad${failedProjects.length !== 1 ? "s" : ""} failed`
-              //       : ""),
-              // },
             );
           }
-        } catch (deductError) {
-          console.error("❌ Error deducting credits:", deductError);
+        } catch {
           toast.error("Failed to deduct credits", {
             description:
               "Videos were generated but credits weren't deducted. Contact support.",
@@ -1047,21 +1054,16 @@ const GenerateAdContent = () => {
                 </div>
               </div>
             )}
-
             <div
-              className={`text-3xl mb-2 transition-transform ${
-                isSelected && !isLocked ? "scale-110" : ""
-              }`}
+              className={`text-3xl mb-2 transition-transform ${isSelected && !isLocked ? "scale-110" : ""}`}
             >
               {style.icon}
             </div>
-
             {isSelected && !isLocked && (
               <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                 <Sparkles className="w-3 h-3 text-white" />
               </div>
             )}
-
             {isLocked && (
               <div className="absolute top-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20">
                 <Crown className="w-2.5 h-2.5 text-amber-500" />
@@ -1071,7 +1073,6 @@ const GenerateAdContent = () => {
               </div>
             )}
           </div>
-
           <div className="p-3 pt-2 border-t">
             <h4 className="font-semibold text-xs mb-0.5">{style.name}</h4>
             <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">
@@ -1097,16 +1098,35 @@ const GenerateAdContent = () => {
     );
   }
 
-  // ==================== DYNAMIC BADGE FOR VIDEO SETTINGS ====================
   const getVideoSettingsBadge = () => {
     const parts = [];
     parts.push(selectedQuality.toUpperCase());
     parts.push(`${selectedDuration}s`);
     parts.push(languages.find((l) => l.code === selectedLanguage)?.flag || "");
-    // ⚠️ ZAKOMENTOWANE - napisy i muzyka wyłączone
-    // if (subtitlesEnabled) parts.push("📝");
-    // if (musicEnabled) parts.push("🎵");
     return parts.join(" • ");
+  };
+
+  const creativeLockButton = creativeControlsLocked ? (
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-semibold text-amber-600">
+      <Lock className="w-3 h-3" />
+      <span>Locked</span>
+    </div>
+  ) : undefined;
+
+  const getCreativeControlsBadge = () => {
+    if (creativeControlsLocked) return "🔒 Locked";
+    const filled = [customHook, callToAction].filter(Boolean).length;
+    if (filled === 0) return "AI will decide everything";
+    if (filled === 1) return "1 hint set • AI fills the rest";
+    return "Hook + CTA set • Tone: " + selectedTone;
+  };
+
+  // ==================== PRODUCT INFO BADGE ====================
+  const getProductInfoBadge = () => {
+    if (campaignName && description) return campaignName;
+    if (campaignName) return `${campaignName} • no description`;
+    if (description) return "No name • AI will generate one";
+    return "Both optional — AI generates from your photos";
   };
 
   return (
@@ -1166,6 +1186,58 @@ const GenerateAdContent = () => {
         </div>
 
         <div className="space-y-4">
+          {/* ==================== PRODUCT INFO (always visible, top) ==================== */}
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Product Info</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {getProductInfoBadge()}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label className="mb-2 block text-sm font-medium">
+                  Product / Campaign Name
+                  <span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    Optional
+                  </span>
+                </Label>
+                <Input
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="e.g., BLAST Electrolyte Drink — leave empty and AI will name it"
+                />
+              </div>
+
+              <div>
+                <Label className="mb-2 block text-sm font-medium">
+                  Product Description
+                  <span className="ml-2 text-[10px] font-normal text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                    Optional
+                  </span>
+                </Label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Advanced electrolyte drink for fitness — or leave empty and AI will write it from your photos"
+                  className="resize-none h-24"
+                />
+                {!campaignName && !description && (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1.5">
+                    <Lightbulb className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                    AI will generate both from your product photos automatically
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+
           {/* Product Images */}
           <Card className="p-6">
             <div className="flex items-start justify-between mb-4">
@@ -1272,7 +1344,6 @@ const GenerateAdContent = () => {
             </div>
 
             <div className="space-y-6">
-              {/* FREE Styles */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-px bg-border flex-1" />
@@ -1283,7 +1354,7 @@ const GenerateAdContent = () => {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {videoStyles
-                    .filter((style) => !style.premium)
+                    .filter((s) => !s.premium)
                     .map((style) => (
                       <StyleCard
                         key={style.id}
@@ -1295,7 +1366,6 @@ const GenerateAdContent = () => {
                 </div>
               </div>
 
-              {/* PREMIUM Styles */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="h-px bg-border flex-1" />
@@ -1309,7 +1379,7 @@ const GenerateAdContent = () => {
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {videoStyles
-                    .filter((style) => style.premium)
+                    .filter((s) => s.premium)
                     .map((style) => (
                       <StyleCard
                         key={style.id}
@@ -1332,7 +1402,7 @@ const GenerateAdContent = () => {
             )}
           </Card>
 
-          {/* ✅ Video Settings - BEZ ENHANCEMENTS */}
+          {/* Video Settings */}
           <CollapsibleSection
             id="video"
             title="Video Settings"
@@ -1342,7 +1412,6 @@ const GenerateAdContent = () => {
             setExpandedSection={setExpandedSection}
           >
             <div className="space-y-5">
-              {/* Quality Selector */}
               <div>
                 <div className="flex items-center justify-between mb-2.5">
                   <Label className="text-sm font-semibold">Video Quality</Label>
@@ -1357,18 +1426,13 @@ const GenerateAdContent = () => {
                       (quality.id === "1080p" && !canUse1080p) ||
                       (quality.id === "ultra" && !canUseUltra);
                     const isSelected = selectedQuality === quality.id;
-
                     return (
                       <Card
                         key={quality.id}
                         className={`p-3 cursor-pointer transition-all ${
                           isLocked
                             ? "opacity-50 cursor-not-allowed"
-                            : `hover:shadow-md ${
-                                isSelected
-                                  ? "ring-2 ring-primary bg-primary/5"
-                                  : "hover:bg-accent/50"
-                              }`
+                            : `hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-accent/50"}`
                         }`}
                         onClick={() => handleQualitySelect(quality.id)}
                       >
@@ -1393,7 +1457,6 @@ const GenerateAdContent = () => {
                 </div>
               </div>
 
-              {/* Duration Selector */}
               <div>
                 <div className="flex items-center justify-between mb-2.5">
                   <Label className="text-sm font-semibold">
@@ -1407,18 +1470,13 @@ const GenerateAdContent = () => {
                   {DURATION_OPTIONS.map((duration) => {
                     const isLocked = duration.id === 15 && !canUse15sec;
                     const isSelected = selectedDuration === duration.id;
-
                     return (
                       <Card
                         key={duration.id}
                         className={`p-3 cursor-pointer transition-all ${
                           isLocked
                             ? "opacity-50 cursor-not-allowed"
-                            : `hover:shadow-md ${
-                                isSelected
-                                  ? "ring-2 ring-primary bg-primary/5"
-                                  : "hover:bg-accent/50"
-                              }`
+                            : `hover:shadow-md ${isSelected ? "ring-2 ring-primary bg-primary/5" : "hover:bg-accent/50"}`
                         }`}
                         onClick={() => handleDurationSelect(duration.id)}
                       >
@@ -1449,7 +1507,6 @@ const GenerateAdContent = () => {
                 </div>
               </div>
 
-              {/* Language Selector */}
               <div>
                 <Label className="mb-2 block text-sm font-semibold">
                   Video Language
@@ -1473,49 +1530,38 @@ const GenerateAdContent = () => {
             </div>
           </CollapsibleSection>
 
-          {/* Creative Controls */}
+          {/* ==================== CREATIVE CONTROLS ==================== */}
           <CollapsibleSection
             id="creative"
             title="Creative Controls"
             icon={<MessageSquare className="w-5 h-5 text-amber-500" />}
-            badge={`${
-              customHook || keyMessage || callToAction
-                ? "Customized"
-                : "AI will decide"
-            }`}
+            badge={getCreativeControlsBadge()}
             expandedSection={expandedSection}
             setExpandedSection={setExpandedSection}
+            lockButton={creativeLockButton}
           >
             <div className="space-y-5">
-              {/* Info Banner */}
-              <div className="p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                <div className="flex items-start gap-3">
-                  <Lightbulb className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      💡 Why fill this out?
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Photos alone might not capture your product's unique value
-                      or target audience. Adding these details helps AI create
-                      ads that truly match your vision and resonate with your
-                      customers.
-                    </p>
-                  </div>
-                </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/8 border border-blue-500/20">
+                <Lightbulb className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  All fields are <strong>optional</strong>. Leave them empty and
+                  AI will write everything based on your product photos and
+                  selected style. Fill in only what matters most to you.
+                </p>
               </div>
 
-              {/* Tone of Voice */}
+              {/* TONE */}
               <div>
                 <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
                   <Smile className="w-4 h-4" />
                   Tone of Voice
                 </Label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                <div
+                  className={`grid grid-cols-2 md:grid-cols-3 gap-2.5 ${creativeControlsLocked ? "opacity-60 pointer-events-none" : ""}`}
+                >
                   {TONE_OPTIONS.map((tone) => {
                     const isSelected = selectedTone === tone.id;
                     const ToneIcon = tone.icon;
-
                     return (
                       <Card
                         key={tone.id}
@@ -1524,7 +1570,9 @@ const GenerateAdContent = () => {
                             ? "ring-2 ring-primary bg-primary/5"
                             : "hover:bg-accent/50 hover:shadow-md"
                         }`}
-                        onClick={() => setSelectedTone(tone.id)}
+                        onClick={() =>
+                          !creativeControlsLocked && setSelectedTone(tone.id)
+                        }
                       >
                         <div className="flex items-start gap-2 mb-2">
                           <ToneIcon className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
@@ -1546,139 +1594,155 @@ const GenerateAdContent = () => {
                 </div>
               </div>
 
-              {/* Hook/Opening Line */}
+              {/* HOOK */}
               <div>
                 <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
                   <Flame className="w-4 h-4 text-orange-500" />
                   Opening Hook
                   <Badge variant="secondary" className="text-[9px]">
-                    First 3 seconds matter!
+                    First 2-3 seconds
                   </Badge>
+                  {customHook && (
+                    <WordCountBadge
+                      text={customHook}
+                      max={hookMaxWords}
+                      label="hook"
+                    />
+                  )}
                 </Label>
                 <Textarea
                   value={customHook}
                   onChange={(e) => setCustomHook(e.target.value)}
-                  placeholder="e.g., 'Stop scrolling! This changes everything...' or 'You need to see this before it's too late'"
+                  placeholder='Optional — e.g., "Stop scrolling! This changes everything..." Leave empty and AI will write a hook for you.'
                   className="resize-none h-20 text-sm"
+                  disabled={creativeControlsLocked}
                 />
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <p className="text-xs text-muted-foreground w-full mb-1">
-                    Quick suggestions:
-                  </p>
-                  {HOOK_SUGGESTIONS.slice(0, 3).map((suggestion, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setCustomHook(suggestion)}
-                    >
-                      {suggestion.substring(0, 30)}...
-                    </Button>
-                  ))}
-                </div>
+                {!creativeControlsLocked && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <p className="text-xs text-muted-foreground w-full mb-1">
+                      Quick suggestions:
+                    </p>
+                    {HOOK_SUGGESTIONS.slice(0, 4).map((suggestion, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setCustomHook(suggestion)}
+                      >
+                        {suggestion.substring(0, 32)}...
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Key Message */}
-              <div>
-                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
-                  <Star className="w-4 h-4 text-yellow-500" />
-                  Key Message
-                </Label>
-                <Textarea
-                  value={keyMessage}
-                  onChange={(e) => setKeyMessage(e.target.value)}
-                  placeholder="What's the main point? e.g., 'Transform your morning routine in 30 seconds' or 'The smartwatch that actually understands you'"
-                  className="resize-none h-20 text-sm"
-                />
-              </div>
-
-              {/* Call to Action */}
+              {/* CTA */}
               <div>
                 <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
                   <ArrowRight className="w-4 h-4 text-green-500" />
                   Call to Action
+                  <Badge variant="secondary" className="text-[9px]">
+                    Last second
+                  </Badge>
+                  {callToAction && (
+                    <WordCountBadge
+                      text={callToAction}
+                      max={ctaMaxWords}
+                      label="CTA"
+                    />
+                  )}
                 </Label>
                 <Input
                   value={callToAction}
                   onChange={(e) => setCallToAction(e.target.value)}
-                  placeholder="e.g., Shop Now, Learn More, Get Yours Today"
+                  placeholder='Optional — e.g., "Shop Now". Leave empty and AI will pick the best CTA.'
                   className="text-sm"
+                  disabled={creativeControlsLocked}
                 />
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <p className="text-xs text-muted-foreground w-full mb-1">
-                    Quick picks:
-                  </p>
-                  {CTA_SUGGESTIONS.slice(0, 6).map((cta, idx) => (
-                    <Button
-                      key={idx}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setCallToAction(cta)}
-                    >
-                      {cta}
-                    </Button>
-                  ))}
-                </div>
+                {!creativeControlsLocked && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <p className="text-xs text-muted-foreground w-full mb-1">
+                      Quick picks:
+                    </p>
+                    {CTA_SUGGESTIONS.slice(0, 6).map((cta, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setCallToAction(cta)}
+                      >
+                        {cta}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Target Audience */}
-              <div>
-                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-500" />
-                  Target Audience
-                </Label>
-                <Input
-                  value={targetAudience}
-                  onChange={(e) => setTargetAudience(e.target.value)}
-                  placeholder="e.g., Tech-savvy professionals 25-40, Fitness enthusiasts, Busy parents"
-                  className="text-sm"
-                />
-              </div>
-
-              {/* Key Selling Points */}
-              <div>
-                <Label className="mb-2 text-sm font-semibold flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-purple-500" />
-                  Key Selling Points
-                </Label>
-                <Textarea
-                  value={keySellingPoints}
-                  onChange={(e) => setKeySellingPoints(e.target.value)}
-                  placeholder="What makes your product special? e.g., 'Wireless charging, 7-day battery, waterproof, AI-powered tracking'"
-                  className="resize-none h-20 text-sm"
-                />
-              </div>
-            </div>
-          </CollapsibleSection>
-
-          {/* Basic Info */}
-          <CollapsibleSection
-            id="basic"
-            title="Basic Info"
-            icon={<Info className="w-5 h-5 text-primary" />}
-            badge="Product details (Optional)"
-            expandedSection={expandedSection}
-            setExpandedSection={setExpandedSection}
-          >
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block text-sm">Campaign Name</Label>
-                <Input
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                  placeholder="e.g., Summer Sale 2024"
-                />
-              </div>
-              <div>
-                <Label className="mb-2 block text-sm">Description</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your product..."
-                  className="resize-none h-24"
-                />
+              {/* Lock / Unlock */}
+              <div className="pt-2 border-t">
+                {creativeControlsLocked ? (
+                  <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 rounded-lg bg-amber-500/20 mt-0.5 flex-shrink-0">
+                          <Lock className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-amber-800 mb-1">
+                            🔒 Settings saved — will be used in the next ad
+                          </p>
+                          <p className="text-xs text-amber-700 leading-relaxed">
+                            These settings are saved and will be{" "}
+                            <strong>used automatically</strong> next time you
+                            generate an ad in this campaign. Unlock if you want
+                            AI to decide on its own instead.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleCreativeLock}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 border border-amber-400/50 text-xs font-semibold text-amber-700 hover:bg-white whitespace-nowrap transition-all flex-shrink-0"
+                      >
+                        <LockOpen className="w-3.5 h-3.5" />
+                        Unlock
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/15">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className="p-1.5 rounded-lg bg-primary/10 mt-0.5 flex-shrink-0">
+                          <LockOpen className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground mb-1">
+                            Want to reuse these settings next time?
+                          </p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Click <strong>"Keep these settings"</strong> and
+                            next time you generate an ad in this campaign, tone,
+                            hook and CTA will be pre-filled automatically.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={toggleCreativeLock}
+                        disabled={isTogglingLock}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 whitespace-nowrap transition-all flex-shrink-0 disabled:opacity-50"
+                      >
+                        {isTogglingLock ? (
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Lock className="w-3.5 h-3.5" />
+                        )}
+                        Keep these settings
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </CollapsibleSection>
@@ -1712,9 +1776,7 @@ const GenerateAdContent = () => {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Your Balance</p>
                 <p
-                  className={`text-2xl font-bold ${
-                    !hasEnoughCredits ? "text-destructive" : "text-green-600"
-                  }`}
+                  className={`text-2xl font-bold ${!hasEnoughCredits ? "text-destructive" : "text-green-600"}`}
                 >
                   {userCredits}
                 </p>

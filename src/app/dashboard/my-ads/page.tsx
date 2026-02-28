@@ -17,6 +17,7 @@ import {
   Info,
   RefreshCw,
   Loader2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,6 +30,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import CaptionEditorModal from "@/components/my-ads/CaptionEditModal";
 import Swal from "sweetalert2";
+
 interface Video {
   id: string;
   project_id: string;
@@ -75,6 +77,8 @@ const MyContent = () => {
     Record<string, number>
   >({});
   const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const styleMapping: Record<
     string,
     {
@@ -162,11 +166,7 @@ const MyContent = () => {
         text: "text-white",
         num: "bg-fuchsia-600",
       },
-      {
-        bg: "from-sky-500 to-blue-500",
-        text: "text-white",
-        num: "bg-sky-600",
-      },
+      { bg: "from-sky-500 to-blue-500", text: "text-white", num: "bg-sky-600" },
       {
         bg: "from-amber-500 to-orange-500",
         text: "text-white",
@@ -199,15 +199,16 @@ const MyContent = () => {
     return icons[index % icons.length];
   };
 
+  // ==================== GET VIDEOS — SORTED NEWEST FIRST ====================
   const getVideosFromCampaign = (campaign: Campaign): Video[] => {
+    let videos: Video[] = [];
+
     if (campaign.videos && campaign.videos.length > 0) {
-      return campaign.videos;
-    }
-    if (campaign.projects && campaign.projects.length > 0) {
-      const allVideos: Video[] = [];
+      videos = campaign.videos;
+    } else if (campaign.projects && campaign.projects.length > 0) {
       campaign.projects.forEach((project: any) => {
         if (project.videos && project.videos.length > 0) {
-          allVideos.push(
+          videos.push(
             ...project.videos.map((v: any) => ({
               ...v,
               quality: project.quality,
@@ -219,20 +220,69 @@ const MyContent = () => {
           );
         }
       });
-      return allVideos;
     }
-    return [];
+
+    // ✅ Sort newest first
+    return videos.sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
   };
+
   const getFailedProjects = (campaign: Campaign): any[] => {
     if (!campaign.projects) return [];
-    return campaign.projects.filter((p: any) => p.status === "failed");
+    return campaign.projects
+      .filter((p: any) => p.status === "failed")
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
   };
+
   const getProcessingProjects = (campaign: Campaign): any[] => {
     if (!campaign.projects) return [];
-    return campaign.projects.filter((p: any) => p.status === "processing");
+    return campaign.projects
+      .filter((p: any) => p.status === "processing")
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
   };
+
+  // ==================== DOWNLOAD VIDEO ====================
+  const handleDownloadVideo = async (video: Video, campaignName: string) => {
+    if (!video.video_url) return;
+
+    setDownloadingId(video.id);
+    try {
+      const response = await fetch(video.video_url);
+      if (!response.ok) throw new Error("Failed to fetch video");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      const styleName = styleMapping[video.style]?.name || video.style;
+      const date = new Date(video.created_at).toISOString().split("T")[0];
+      a.download = `${campaignName}_${styleName}_${date}.mp4`
+        .replace(/[^a-z0-9_\-.]/gi, "_")
+        .toLowerCase();
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Video saved to your computer!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download video");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   const handleDeleteProject = async (projectId: string, campaignId: string) => {
-    // ✅ SweetAlert confirmation
     const result = await Swal.fire({
       title: "Delete Video?",
       html: `
@@ -263,9 +313,7 @@ const MyContent = () => {
       },
     });
 
-    if (!result.isConfirmed) {
-      return;
-    }
+    if (!result.isConfirmed) return;
 
     try {
       toast.loading("Deleting video...", { id: "delete-toast" });
@@ -273,19 +321,14 @@ const MyContent = () => {
       const response = await fetch("/api/delete-project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: projectId,
-          userId: userId,
-        }),
+        body: JSON.stringify({ projectId, userId }),
       });
 
       if (!response.ok) {
         const text = await response.text();
-        console.error("Error response:", text);
         throw new Error(text || "Failed to delete video");
       }
 
-      const data = await response.json();
       toast.dismiss("delete-toast");
 
       await Swal.fire({
@@ -296,9 +339,7 @@ const MyContent = () => {
         color: "#fff",
         confirmButtonColor: "#10b981",
         timer: 2000,
-        customClass: {
-          popup: "rounded-xl border border-green-500/30",
-        },
+        customClass: { popup: "rounded-xl border border-green-500/30" },
       });
 
       fetchCampaigns(false);
@@ -307,6 +348,7 @@ const MyContent = () => {
       toast.error(error.message || "Failed to delete project");
     }
   };
+
   const handleDeleteCampaign = async (campaignId: string) => {
     if (!userId) {
       toast.error("User session not found. Please refresh the page.");
@@ -343,29 +385,21 @@ const MyContent = () => {
       },
     });
 
-    if (!result.isConfirmed) {
-      return;
-    }
+    if (!result.isConfirmed) return;
 
     try {
-      console.log("🔍 Delete request:", { campaignId, userId });
-
       toast.loading("Deleting campaign...", { id: "delete-campaign-toast" });
 
       const response = await fetch("/api/delete-campaign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          campaignId: campaignId,
-          userId: userId,
-        }),
+        body: JSON.stringify({ campaignId, userId }),
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(data.error || "Failed to delete campaign");
-      }
 
       toast.dismiss("delete-campaign-toast");
 
@@ -377,9 +411,7 @@ const MyContent = () => {
         color: "#fff",
         confirmButtonColor: "#10b981",
         timer: 2000,
-        customClass: {
-          popup: "rounded-xl border border-green-500/30",
-        },
+        customClass: { popup: "rounded-xl border border-green-500/30" },
       });
 
       fetchCampaigns(false);
@@ -388,27 +420,23 @@ const MyContent = () => {
       toast.error(error.message || "Failed to delete campaign");
     }
   };
+
   const fetchConnectedPlatforms = async () => {
     try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session?.user) {
-        return;
-      }
+      if (!session?.user) return;
       setUserId(session.user.id);
 
       const response = await fetch(
         `/api/connections?userId=${session.user.id}`,
       );
-      if (!response.ok) {
-        return;
-      }
+      if (!response.ok) return;
 
       const data = await response.json();
       if (data.connections) {
-        const platforms = data.connections.map((c: any) => c.platform);
-        setConnectedPlatforms(platforms);
+        setConnectedPlatforms(data.connections.map((c: any) => c.platform));
       }
     } catch (error) {
       console.error("Error fetching connected platforms:", error);
@@ -417,9 +445,7 @@ const MyContent = () => {
 
   const fetchCampaigns = async (showLoadingState = true) => {
     try {
-      if (showLoadingState) {
-        setLoading(true);
-      }
+      if (showLoadingState) setLoading(true);
 
       const {
         data: { session },
@@ -440,38 +466,20 @@ const MyContent = () => {
       const data = await response.json();
       if (data.campaigns.length !== 0) {
         const fixedCampaigns = data.campaigns.map((campaign: Campaign) => {
-          console.log(
-            "🔍 Original product_image_url:",
-            campaign.product_image_url,
-          );
-
           let imageUrl = campaign.product_image_url;
-
           if (typeof imageUrl === "string" && imageUrl.includes(",")) {
             imageUrl = imageUrl.split(",")[0].trim();
           } else if (Array.isArray(imageUrl)) {
             imageUrl = imageUrl[0];
           }
-
           if (
             !imageUrl ||
             typeof imageUrl !== "string" ||
             imageUrl.trim() === ""
           ) {
-            console.warn(
-              "⚠️ Invalid image URL for campaign:",
-              campaign.name,
-              imageUrl,
-            );
             imageUrl = "/placeholder-product.png";
           }
-
-          console.log("✅ Fixed product_image_url:", imageUrl);
-
-          return {
-            ...campaign,
-            product_image_url: imageUrl,
-          };
+          return { ...campaign, product_image_url: imageUrl };
         });
         setCampaigns(fixedCampaigns);
       } else {
@@ -484,6 +492,8 @@ const MyContent = () => {
       setLoading(false);
     }
   };
+
+  // ==================== PROGRESS TRACKING ====================
   useEffect(() => {
     const updateProgress = () => {
       const now = Date.now();
@@ -516,7 +526,6 @@ const MyContent = () => {
     };
 
     if (campaigns.length > 0) updateProgress();
-
     const interval = setInterval(updateProgress, 1000);
     return () => clearInterval(interval);
   }, [campaigns]);
@@ -525,26 +534,24 @@ const MyContent = () => {
     fetchConnectedPlatforms();
     fetchCampaigns();
 
-    const initialRefreshTimeout = setTimeout(() => {
-      fetchCampaigns(false);
-    }, 12500);
-
-    const autoRefreshInterval = setInterval(() => {
-      fetchCampaigns(false);
-    }, 30000);
+    const initialRefreshTimeout = setTimeout(
+      () => fetchCampaigns(false),
+      12500,
+    );
+    const autoRefreshInterval = setInterval(() => fetchCampaigns(false), 30000);
 
     return () => {
       clearTimeout(initialRefreshTimeout);
       clearInterval(autoRefreshInterval);
     };
   }, []);
+
   useEffect(() => {
     const failedCount = campaigns.reduce((sum, c) => {
-      const failedProjects = (c.projects || []).filter(
-        (p: any) => p.status === "failed",
-      ).length;
-
-      return sum + failedProjects;
+      return (
+        sum +
+        (c.projects || []).filter((p: any) => p.status === "failed").length
+      );
     }, 0);
 
     if (failedCount > 0 && !loading) {
@@ -563,6 +570,104 @@ const MyContent = () => {
       );
     }
   }, [campaigns, loading]);
+
+  // ==================== TIMEOUT CHECK ====================
+  useEffect(() => {
+    const checkStuckProjects = async () => {
+      if (!userId) return;
+
+      const TIMEOUT_MS = 15 * 60 * 1000;
+      const now = Date.now();
+
+      for (const campaign of campaigns) {
+        const processingProjects = getProcessingProjects(campaign);
+
+        for (const project of processingProjects) {
+          const storageKey = `processing_start_${project.id}`;
+          const retryKey = `retry_at_${project.id}`;
+          const storedStart = localStorage.getItem(storageKey);
+          const retryAt = localStorage.getItem(retryKey);
+
+          if (retryAt && now - parseInt(retryAt) < 60_000) continue;
+
+          if (!storedStart) {
+            localStorage.setItem(storageKey, now.toString());
+            continue;
+          }
+
+          const startTime = parseInt(storedStart);
+          const elapsedTime = now - startTime;
+
+          if (elapsedTime > TIMEOUT_MS) {
+            try {
+              const costPerVideo = calculateCost(
+                project.quality,
+                project.duration,
+              );
+
+              const refundResponse = await fetch("/api/refund-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId, amount: costPerVideo }),
+              });
+
+              if (refundResponse.ok) {
+                console.log(
+                  `✅ Refunded ${costPerVideo} credits for stuck project ${project.id}`,
+                );
+              }
+
+              const updateResponse = await fetch("/api/update-project-status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  project_id: project.id,
+                  status: "failed",
+                }),
+              });
+
+              if (updateResponse.ok) {
+                localStorage.removeItem(storageKey);
+                localStorage.removeItem(retryKey);
+
+                toast.error(
+                  `Generation timeout: ${project.selected_styles?.[0] || "video"}`,
+                  {
+                    description: `No response after 15 minutes. ${costPerVideo} credits refunded. You can retry below.`,
+                    duration: 10000,
+                  },
+                );
+
+                fetchCampaigns(false);
+              }
+            } catch (error) {
+              console.error("❌ Error handling stuck project:", error);
+            }
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkStuckProjects, 30000);
+    checkStuckProjects();
+    return () => clearInterval(interval);
+  }, [campaigns, userId]);
+
+  const calculateCost = (quality: string, duration: number): number => {
+    const CREDIT_COSTS = {
+      "720p": { 10: 15, 15: 25 },
+      "1080p": { 10: 75, 15: 135 },
+      ultra: { 10: 160, 15: 300 },
+    } as const;
+
+    type QualityType = keyof typeof CREDIT_COSTS;
+    type DurationType = keyof (typeof CREDIT_COSTS)["720p"];
+
+    const q = quality as QualityType;
+    const d = duration as DurationType;
+    return CREDIT_COSTS[q]?.[d] || 15;
+  };
+
   const toggleCampaign = (campaignId: string) => {
     setExpandedCampaigns((prev) => {
       const newSet = new Set(prev);
@@ -588,14 +693,9 @@ const MyContent = () => {
       const response = await fetch(
         `/api/get-video-captions?videoId=${video.id}`,
       );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch video captions");
-      }
+      if (!response.ok) throw new Error("Failed to fetch video captions");
 
       const data = await response.json();
-
-      console.log("✅ Loaded real AI captions:", data.captions);
 
       setSelectedVideoForCaption({
         ...video,
@@ -622,21 +722,16 @@ const MyContent = () => {
           videoId: selectedVideoForCaption.id,
           platforms: postData.platforms,
           captions: postData.captions,
-          userId: userId,
-          options: {
-            facebookPostTypes: postData.facebookPostTypes,
-          },
+          userId,
+          options: { facebookPostTypes: postData.facebookPostTypes },
         }),
       });
 
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to post video");
-      }
+      if (!response.ok) throw new Error(data.error || "Failed to post video");
 
       toast.dismiss();
       toast.success("Video posted successfully!");
-
       setShowCaptionModal(false);
       setSelectedVideoForCaption(null);
       fetchCampaigns(false);
@@ -646,107 +741,9 @@ const MyContent = () => {
     }
   };
 
-  useEffect(() => {
-    const checkStuckProjects = async () => {
-      if (!userId) return;
-
-      const TIMEOUT_MS = 7 * 60 * 1000;
-      const now = Date.now();
-
-      for (const campaign of campaigns) {
-        const processingProjects = getProcessingProjects(campaign);
-
-        for (const project of processingProjects) {
-          const createdAt = new Date(project.created_at).getTime();
-          const elapsedTime = now - createdAt;
-
-          if (elapsedTime > TIMEOUT_MS) {
-            console.log(
-              `⏰ Project ${project.id} stuck in processing for ${Math.round(elapsedTime / 1000)}s`,
-            );
-
-            try {
-              const costPerVideo = calculateCost(
-                project.quality,
-                project.duration,
-              );
-
-              const refundResponse = await fetch("/api/refund-credits", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  user_id: userId,
-                  amount: costPerVideo,
-                }),
-              });
-
-              if (refundResponse.ok) {
-                console.log(
-                  `✅ Refunded ${costPerVideo} credits for stuck project ${project.id}`,
-                );
-              }
-
-              const updateResponse = await fetch("/api/update-project-status", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  project_id: project.id,
-                  status: "failed",
-                }),
-              });
-
-              if (updateResponse.ok) {
-                console.log(
-                  `✅ Project ${project.id} marked as error (timeout)`,
-                );
-
-                toast.error(
-                  `Generation timeout: ${project.selected_styles?.[0] || "video"}`,
-                  {
-                    description: `No response after 7 minutes. ${costPerVideo} credits refunded. You can retry below.`,
-                    duration: 10000,
-                  },
-                );
-
-                fetchCampaigns(false);
-              }
-            } catch (error) {
-              console.error("❌ Error handling stuck project:", error);
-            }
-          }
-        }
-      }
-    };
-
-    const interval = setInterval(() => {
-      checkStuckProjects();
-    }, 30000);
-
-    checkStuckProjects();
-
-    return () => clearInterval(interval);
-  }, [campaigns, userId]);
-
-  const calculateCost = (quality: string, duration: number): number => {
-    const CREDIT_COSTS = {
-      "720p": { 10: 15, 15: 25 },
-      "1080p": { 10: 75, 15: 135 },
-      ultra: { 10: 160, 15: 300 },
-    } as const;
-
-    type QualityType = keyof typeof CREDIT_COSTS;
-    type DurationType = keyof (typeof CREDIT_COSTS)["720p"];
-
-    const q = quality as QualityType;
-    const d = duration as DurationType;
-
-    return CREDIT_COSTS[q]?.[d] || 15;
-  };
-
+  // ==================== RETRY VIDEO ====================
   const handleRetryFailedVideo = async (video: any, campaign: Campaign) => {
     try {
-      console.log("🔄 Starting retry for video:", video.id);
-
       toast.loading("Retrying video generation...", { id: "retry-toast" });
 
       const response = await fetch("/api/retry-video-generation", {
@@ -755,80 +752,70 @@ const MyContent = () => {
         body: JSON.stringify({
           videoId: video.id,
           projectId: video.project_id,
-          userId: userId,
+          userId,
         }),
       });
 
       const data = await response.json();
       toast.dismiss("retry-toast");
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(data.error || "Failed to retry video generation");
-      }
+
+      const retryNow = Date.now();
+      localStorage.setItem(
+        `processing_start_${video.project_id}`,
+        retryNow.toString(),
+      );
+      localStorage.setItem(`retry_at_${video.project_id}`, retryNow.toString());
 
       toast.success(
         "✅ Video generation restarted! It will be ready in 2-4 minutes.",
-        {
-          duration: 5000,
-        },
+        { duration: 5000 },
       );
-
-      setTimeout(() => {
-        fetchCampaigns(false);
-      }, 2000);
+      setTimeout(() => fetchCampaigns(false), 2000);
     } catch (error: any) {
-      console.error("❌ Retry error:", error);
       toast.dismiss("retry-toast");
-      toast.error(`Failed to retry: ${error.message}`, {
-        duration: 5000,
-      });
+      toast.error(`Failed to retry: ${error.message}`, { duration: 5000 });
     }
   };
 
+  // ==================== RETRY PROJECT ====================
   const handleRetryFailedProject = async (project: any) => {
     try {
-      console.log("🔄 Starting retry for project:", project.id);
-
       toast.loading("Retrying video generation...", {
         id: "retry-project-toast",
       });
 
-      // Pobierz pierwsze video z projektu (jeśli istnieje) lub użyj project.id jako videoId
       const videoId = project.videos?.[0]?.id || project.id;
 
       const response = await fetch("/api/retry-video-generation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId: videoId,
-          projectId: project.id,
-          userId: userId,
-        }),
+        body: JSON.stringify({ videoId, projectId: project.id, userId }),
       });
 
       const data = await response.json();
       toast.dismiss("retry-project-toast");
 
-      if (!response.ok) {
+      if (!response.ok)
         throw new Error(data.error || "Failed to retry project generation");
-      }
+
+      const retryNow = Date.now();
+      localStorage.setItem(
+        `processing_start_${project.id}`,
+        retryNow.toString(),
+      );
+      localStorage.setItem(`retry_at_${project.id}`, retryNow.toString());
 
       toast.success(
         "✅ Video generation restarted! It will be ready in 2-4 minutes.",
-        {
-          duration: 5000,
-        },
+        { duration: 5000 },
       );
-
-      setTimeout(() => {
-        fetchCampaigns(false);
-      }, 2000);
+      setTimeout(() => fetchCampaigns(false), 2000);
     } catch (error: any) {
-      console.error("❌ Retry error:", error);
       toast.dismiss("retry-project-toast");
-      toast.error(`Failed to retry: ${error.message}`, {
-        duration: 5000,
-      });
+      toast.error(`Failed to retry: ${error.message}`, { duration: 5000 });
     }
   };
 
@@ -836,14 +823,12 @@ const MyContent = () => {
     (sum, c) => sum + getVideosFromCampaign(c).length,
     0,
   );
-
   const processingCount = campaigns.reduce((sum, c) => {
-    const projectsCount = (c.projects || []).filter(
-      (p: any) => p.status === "processing",
-    ).length;
-    return sum + projectsCount;
+    return (
+      sum +
+      (c.projects || []).filter((p: any) => p.status === "processing").length
+    );
   }, 0);
-
   const readyCount = campaigns.reduce(
     (sum, c) =>
       sum + getVideosFromCampaign(c).filter((v) => v.video_url).length,
@@ -931,7 +916,8 @@ const MyContent = () => {
             </div>
           </div>
         )}
-        {/* Header - simplified on mobile */}
+
+        {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
@@ -942,7 +928,6 @@ const MyContent = () => {
                 Manage your campaigns and videos
               </p>
             </div>
-            {/* Desktop button */}
             <Button
               onClick={() => router.push("/dashboard/generate-ad")}
               className="hidden md:flex gap-2 bg-cyan-500 hover:bg-cyan-600"
@@ -961,6 +946,7 @@ const MyContent = () => {
         >
           <Plus className="w-6 h-6" />
         </button>
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
           <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30 p-3 md:p-6">
@@ -1014,6 +1000,7 @@ const MyContent = () => {
               </div>
             </div>
           </Card>
+
           {campaigns.some((c) =>
             getVideosFromCampaign(c).some((v) => v.status === "failed"),
           ) && (
@@ -1066,17 +1053,12 @@ const MyContent = () => {
                   onClick={() => toggleCampaign(campaign.id)}
                 >
                   <div className="flex items-start justify-between">
-                    {/* Thumbnail */}
                     <div className="flex gap-4 flex-1">
                       <img
                         src={campaign.product_image_url}
                         alt={campaign.name}
                         className="w-24 h-24 rounded-lg object-cover"
                         onError={(e) => {
-                          console.error(
-                            "❌ Image failed to load:",
-                            campaign.product_image_url,
-                          );
                           const target = e.target as HTMLImageElement;
                           target.style.display = "none";
                           const fallback = document.createElement("div");
@@ -1089,7 +1071,6 @@ const MyContent = () => {
                         }}
                       />
 
-                      {/* Campaign Info */}
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <h3 className="text-2xl font-bold text-white">
@@ -1125,7 +1106,6 @@ const MyContent = () => {
                     </div>
                   </div>
 
-                  {/* Quick Stats */}
                   <div className="flex gap-3 mt-4">
                     {campaignVideos.filter((v) => v.status === "failed")
                       .length > 0 && (
@@ -1165,7 +1145,6 @@ const MyContent = () => {
                 {/* Expanded Content */}
                 {isExpanded && (
                   <div className="px-6 pb-6 border-t border-gray-700">
-                    {/* Generate More Button */}
                     <div className="py-4 justify-between flex flex-col md:flex-row gap-3 md:gap-0">
                       <Button
                         onClick={(e) => {
@@ -1190,6 +1169,7 @@ const MyContent = () => {
                         Delete Campaign
                       </Button>
                     </div>
+
                     {/* Failed Projects Section */}
                     {getFailedProjects(campaign).length > 0 && (
                       <div className="mb-6">
@@ -1262,6 +1242,7 @@ const MyContent = () => {
                       </div>
                     )}
 
+                    {/* Failed Videos Section */}
                     {campaignVideos.filter((v) => v.status === "failed")
                       .length > 0 && (
                       <div className="mb-6">
@@ -1339,11 +1320,9 @@ const MyContent = () => {
                                         Video #{videoNumber}
                                       </p>
                                     </div>
-
                                     <div className="absolute top-2 left-2 bg-red-600 text-white px-3 py-1 rounded-full font-bold text-sm">
                                       #{videoNumber}
                                     </div>
-
                                     <div className="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full font-bold text-sm flex items-center gap-1">
                                       <X className="w-3 h-3" />
                                       FAILED
@@ -1366,7 +1345,6 @@ const MyContent = () => {
                                           video.style}
                                       </Badge>
                                     </div>
-
                                     <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 mb-3">
                                       <p className="text-red-200 text-xs font-medium mb-1">
                                         ⚠️ What happened?
@@ -1377,12 +1355,10 @@ const MyContent = () => {
                                         temporary and can be fixed by retrying.
                                       </p>
                                     </div>
-
                                     <p className="text-xs text-red-300/70 mb-3">
                                       {video.quality} • {video.duration}s •{" "}
                                       {video.language?.toUpperCase() || "EN"}
                                     </p>
-
                                     <button
                                       type="button"
                                       className="w-full bg-red-500 hover:bg-red-600 text-white font-bold px-4 py-2 rounded-md flex items-center justify-center gap-2 transition-colors"
@@ -1402,6 +1378,7 @@ const MyContent = () => {
                         </div>
                       </div>
                     )}
+
                     {/* Processing Projects */}
                     {processingProjects.length > 0 && (
                       <div className="mb-6">
@@ -1413,7 +1390,6 @@ const MyContent = () => {
                                 Generating Videos ({processingProjects.length})
                               </h4>
                             </div>
-
                             <div className="bg-orange-500/20 border border-orange-500/40 rounded-lg p-3 flex items-center gap-3">
                               <div className="bg-orange-500 p-2 rounded-lg">
                                 <Loader2 className="w-5 h-5 text-white animate-spin" />
@@ -1424,9 +1400,7 @@ const MyContent = () => {
                                 </p>
                                 <p className="text-orange-300/80 text-xs">
                                   Average time: 2–4 minutes. The page refreshes
-                                  automatically every 30 seconds, or you can
-                                  click the Refresh button to check progress
-                                  manually.
+                                  automatically every 30 seconds.
                                 </p>
                               </div>
                             </div>
@@ -1444,25 +1418,11 @@ const MyContent = () => {
                             (project: any, idx: number) => {
                               const progress =
                                 processingProgress[project.id] || 0;
-
                               return (
                                 <div
                                   key={project.id}
                                   className="bg-gray-900/30 border border-orange-500/20 rounded-xl p-5 relative"
                                 >
-                                  {/* <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteProject(
-                                        project.id,
-                                        campaign.id,
-                                      );
-                                    }}
-                                    className="absolute top-2 right-2 bg-slate-900/80 hover:bg-red-500 text-gray-400 hover:text-white p-1.5 rounded-lg transition-all z-10"
-                                    title="Cancel and delete"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button> */}
                                   <div className="flex items-center justify-between mb-4">
                                     <span className="text-white text-sm font-medium">
                                       Generating video
@@ -1471,14 +1431,12 @@ const MyContent = () => {
                                       {Math.round(progress)}%
                                     </span>
                                   </div>
-
                                   <div className="relative w-full bg-gray-800/50 rounded-full h-2 overflow-hidden mb-4">
                                     <div
                                       className="absolute inset-y-0 left-0 bg-orange-500 transition-all duration-1000 ease-out"
                                       style={{ width: `${progress}%` }}
                                     />
                                   </div>
-
                                   <div className="flex items-center justify-between text-xs text-gray-500">
                                     <span>
                                       {project.quality} · {project.duration}s ·{" "}
@@ -1503,7 +1461,7 @@ const MyContent = () => {
                       </div>
                     )}
 
-                    {/* Ready Videos */}
+                    {/* Ready Videos — newest first */}
                     {campaignVideos.length > 0 && (
                       <div>
                         <h4 className="text-white font-semibold mb-3">
@@ -1515,11 +1473,12 @@ const MyContent = () => {
                               campaignVideos.length - videoIndex;
                             const colorScheme = getVideoColorScheme(videoIndex);
                             const videoIcon = getVideoIcon(videoIndex);
+                            const isDownloading = downloadingId === video.id;
 
                             return (
                               <Card
                                 key={video.id}
-                                className="bg-gray-900/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all group"
+                                className="bg-gray-900/50 border-gray-700 overflow-hidden hover:border-cyan-500/50 transition-all group relative"
                               >
                                 {video.status === "ready" && (
                                   <button
@@ -1549,7 +1508,7 @@ const MyContent = () => {
                                       styleIcon:
                                         styleMapping[video.style]?.icon || "🎬",
                                       videoNumber: videoIndex + 1,
-                                      colorScheme: colorScheme,
+                                      colorScheme,
                                     })
                                   }
                                 >
@@ -1569,11 +1528,8 @@ const MyContent = () => {
                                         e.currentTarget.currentTime = 0;
                                       }}
                                       onError={(e) => {
-                                        if (
-                                          e.currentTarget.error?.code === 20
-                                        ) {
+                                        if (e.currentTarget.error?.code === 20)
                                           e.preventDefault();
-                                        }
                                       }}
                                     />
                                   ) : (
@@ -1591,11 +1547,9 @@ const MyContent = () => {
                                   >
                                     #{videoNumber}
                                   </div>
-
                                   <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full text-xl">
                                     {styleMapping[video.style]?.icon || "🎬"}
                                   </div>
-
                                   <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
                                 </div>
 
@@ -1640,7 +1594,7 @@ const MyContent = () => {
 
                                   {video.status === "ready" &&
                                     video.video_url && (
-                                      <div className="flex gap-2">
+                                      <div className="flex gap-2 flex-wrap">
                                         <Button
                                           size="sm"
                                           variant="outline"
@@ -1656,6 +1610,26 @@ const MyContent = () => {
                                         >
                                           <Eye className="w-3 h-3 mr-1" />
                                           Preview
+                                        </Button>
+                                        {/* ✅ DOWNLOAD BUTTON */}
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="flex-1 border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300 hover:text-cyan-200"
+                                          onClick={() =>
+                                            handleDownloadVideo(
+                                              video,
+                                              campaign.name,
+                                            )
+                                          }
+                                          disabled={isDownloading}
+                                        >
+                                          {isDownloading ? (
+                                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                          ) : (
+                                            <Download className="w-3 h-3 mr-1" />
+                                          )}
+                                          Save
                                         </Button>
                                         <Button
                                           size="sm"
@@ -1830,38 +1804,62 @@ const MyContent = () => {
                 Close
               </Button>
               {previewVideo.video_url && (
-                <Button
-                  className="flex-1"
-                  onClick={async () => {
-                    const campaign = campaigns.find((c) =>
-                      getVideosFromCampaign(c).some(
-                        (v) => v.id === previewVideo.id,
-                      ),
-                    );
-                    if (campaign) {
-                      setPreviewVideo(null);
-                      await handlePostNow(previewVideo, campaign);
-                    }
-                  }}
-                  disabled={loadingCaptions}
-                >
-                  {loadingCaptions ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Post This Video
-                    </>
-                  )}
-                </Button>
+                <>
+                  {/* ✅ DOWNLOAD IN MODAL */}
+                  <Button
+                    variant="outline"
+                    className="border-cyan-500/30 hover:bg-cyan-500/10 text-cyan-300"
+                    onClick={() => {
+                      const campaign = campaigns.find((c) =>
+                        getVideosFromCampaign(c).some(
+                          (v) => v.id === previewVideo.id,
+                        ),
+                      );
+                      if (campaign)
+                        handleDownloadVideo(previewVideo, campaign.name);
+                    }}
+                    disabled={downloadingId === previewVideo.id}
+                  >
+                    {downloadingId === previewVideo.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={async () => {
+                      const campaign = campaigns.find((c) =>
+                        getVideosFromCampaign(c).some(
+                          (v) => v.id === previewVideo.id,
+                        ),
+                      );
+                      if (campaign) {
+                        setPreviewVideo(null);
+                        await handlePostNow(previewVideo, campaign);
+                      }
+                    }}
+                    disabled={loadingCaptions}
+                  >
+                    {loadingCaptions ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Post This Video
+                      </>
+                    )}
+                  </Button>
+                </>
               )}
             </div>
           </div>
         </div>
       )}
+
       {/* Caption Editor Modal */}
       {showCaptionModal && selectedVideoForCaption && (
         <CaptionEditorModal

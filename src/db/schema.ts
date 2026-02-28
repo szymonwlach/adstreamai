@@ -62,11 +62,10 @@ export const toneEnum = pgEnum("tone_of_voice", [
   "urgent",
 ]);
 
-// ✅ NEW: Waitlist Status Enum
 export const waitlistStatusEnum = pgEnum("waitlist_status", [
-  "pending", // Czeka na dostęp
-  "accepted", // Dostał dostęp do platformy
-  "rewarded", // Już dostał bonus credits
+  "pending",
+  "accepted",
+  "rewarded",
 ]);
 
 // ============================================
@@ -76,33 +75,33 @@ export const waitlistStatusEnum = pgEnum("waitlist_status", [
 export const usersTable = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
-  display_name: text("display_name"), // ADD THIS - user's display name
-  avatar_url: text("avatar_url"), // ADD THIS - URL to avatar image
+  display_name: text("display_name"),
+  avatar_url: text("avatar_url"),
   plan: planEnum("plan").notNull().default("free"),
   credits: integer("credits").notNull().default(50),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   is_active: boolean("is_active").notNull().default(true),
-  deleted_at: timestamp("deleted_at"), // Already added
+  deleted_at: timestamp("deleted_at"),
 });
+
 export const reviewsTable = pgTable("reviews", {
   id: uuid("id").primaryKey().defaultRandom(),
   user_id: uuid("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
   user_email: text("user_email").notNull(),
-  user_name: text("user_name"), // Display name at time of review
-  user_avatar: text("user_avatar"), // Avatar URL at time of review
-  rating: integer("rating").notNull(), // 1-5 stars
+  user_name: text("user_name"),
+  user_avatar: text("user_avatar"),
+  rating: integer("rating").notNull(),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  is_verified: boolean("is_verified").notNull().default(false), // Admin can verify
+  is_verified: boolean("is_verified").notNull().default(false),
   is_published: boolean("is_published").notNull().default(true),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
-// Optional: Table for admin responses to reviews
 export const reviewResponsesTable = pgTable("review_responses", {
   id: uuid("id").primaryKey().defaultRandom(),
   review_id: uuid("review_id")
@@ -128,7 +127,7 @@ export const subscriptionsTable = pgTable("subscriptions", {
 });
 
 // ============================================
-// ✅ WAITLIST TABLE
+// WAITLIST
 // ============================================
 
 export const waitlistTable = pgTable("waitlist", {
@@ -153,15 +152,15 @@ export const campaignsTable = pgTable("campaigns", {
   description: text("description"),
   product_image_url: text("product_image_url").notNull(),
   videos_generated: integer("videos_generated").notNull().default(0),
-  total_views: integer("total_views").default(0),
-  total_likes: integer("total_likes").default(0),
-  total_shares: integer("total_shares").default(0),
+  creative_controls_locked: boolean("creative_controls_locked")
+    .notNull()
+    .default(false),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // ============================================
-// PROJECTS & PRODUCTS
+// PROJECTS
 // ============================================
 
 export const projectsTable = pgTable("projects", {
@@ -181,19 +180,10 @@ export const projectsTable = pgTable("projects", {
   quality: text("quality").notNull(),
   duration: integer("duration"),
 
-  // Audio/Visual Settings
-  // subtitles_enabled: boolean("subtitles_enabled").notNull().default(false),
-  // subtitle_style: text("subtitle_style"),
-  // color_scheme: text("color_scheme"),
-  // music_enabled: boolean("music_enabled").notNull().default(true),
-
-  // Creative Control Fields
+  // Creative Control Fields (only what's used)
   tone_of_voice: toneEnum("tone_of_voice").default("casual"),
   custom_hook: text("custom_hook"),
-  key_message: text("key_message"),
   call_to_action: text("call_to_action"),
-  target_audience: text("target_audience"),
-  key_selling_points: text("key_selling_points"),
 
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
@@ -214,28 +204,12 @@ export const videosTable = pgTable("videos", {
   video_url: text("video_url").notNull(),
   style: videoStyleEnum("style").notNull(),
   ai_captions: jsonb("ai_captions").$type<{
-    instagram?: {
-      text: string;
-      hashtags: string;
-    };
-    facebook?: {
-      title: string;
-      text: string;
-    };
-    youtube_shorts?: {
-      title: string;
-      description: string;
-    };
-    tiktok?: {
-      text: string;
-    };
-    linkedin?: {
-      title: string;
-      text: string;
-    };
-    x?: {
-      text: string;
-    };
+    instagram?: { text: string; hashtags: string };
+    facebook?: { title: string; text: string };
+    youtube_shorts?: { title: string; description: string };
+    tiktok?: { text: string };
+    linkedin?: { title: string; text: string };
+    x?: { text: string };
   }>(),
   metadata: jsonb("metadata"),
   created_at: timestamp("created_at").notNull().defaultNow(),

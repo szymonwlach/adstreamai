@@ -19,32 +19,17 @@ export async function POST(req: NextRequest) {
       quality,
       duration,
       campaign_id,
-      // subtitles_enabled,
-      // subtitle_style,
-      // music_enabled,
-      // color_scheme,
-      // ✅ NEW CREATIVE FIELDS
       tone_of_voice,
       custom_hook,
-      key_message,
       call_to_action,
-      target_audience,
-      key_selling_points,
     } = body;
 
     // Clean up empty strings to null
     name = name && name.trim() ? name.trim() : null;
     description = description && description.trim() ? description.trim() : null;
     custom_hook = custom_hook && custom_hook.trim() ? custom_hook.trim() : null;
-    key_message = key_message && key_message.trim() ? key_message.trim() : null;
     call_to_action =
       call_to_action && call_to_action.trim() ? call_to_action.trim() : null;
-    target_audience =
-      target_audience && target_audience.trim() ? target_audience.trim() : null;
-    key_selling_points =
-      key_selling_points && key_selling_points.trim()
-        ? key_selling_points.trim()
-        : null;
 
     console.log("🧹 After cleanup:");
     console.log("  Name:", name);
@@ -53,7 +38,6 @@ export async function POST(req: NextRequest) {
     console.log("  Custom hook:", custom_hook);
     console.log("  Tone:", tone_of_voice);
 
-    // Walidacja wymaganych pól
     if (
       !user_id ||
       !product_url ||
@@ -68,8 +52,6 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-
-    console.log("💾 Creating projects for each style...");
 
     let campaignId: string;
 
@@ -100,7 +82,6 @@ export async function POST(req: NextRequest) {
           .where(eq(campaignsTable.id, campaign_id));
       }
     } else {
-      // Check if campaign exists for this product
       let existingCampaigns = null;
 
       if (description) {
@@ -149,6 +130,7 @@ export async function POST(req: NextRequest) {
     // ============================================
     // STEP 2: Create SEPARATE project for EACH style
     // ============================================
+
     const createdProjects = [];
 
     for (const style of selected_style) {
@@ -159,25 +141,17 @@ export async function POST(req: NextRequest) {
         .values({
           user_id,
           campaign_id: campaignId,
-          name: name,
-          description: description,
+          name,
+          description,
           product_image_url: product_url,
           selected_styles: [style],
           language: language || "en",
           status: "processing",
           quality: quality || "720p",
           duration: duration || 10,
-          // subtitles_enabled: subtitles_enabled ?? false,
-          // subtitle_style: subtitles_enabled ? subtitle_style : null,
-          // music_enabled: music_enabled ?? true,
-          // color_scheme: subtitles_enabled ? color_scheme : null,
-          // ✅ NEW CREATIVE FIELDS
           tone_of_voice: tone_of_voice || "casual",
-          custom_hook: custom_hook,
-          key_message: key_message,
-          call_to_action: call_to_action,
-          target_audience: target_audience,
-          key_selling_points: key_selling_points,
+          custom_hook,
+          call_to_action,
         })
         .returning();
 

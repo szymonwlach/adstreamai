@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
       ? "http://localhost:3000"
       : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    const sendToN8nUrl = `${baseUrl}/api/sendtoN8n`;
+    const sendToN8nUrl = `${baseUrl}/api/sendToN8n`;
     console.log("📡 Calling sendtoN8n at:", sendToN8nUrl);
 
     let n8nResponse;
