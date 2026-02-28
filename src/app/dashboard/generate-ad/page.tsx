@@ -233,6 +233,10 @@ const HOOK_SUGGESTIONS = [
   "This solved my biggest problem",
 ];
 
+// ==================== ALLOWED IMAGE TYPES ====================
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+const ALLOWED_IMAGE_EXTENSIONS = ".jpg,.jpeg,.png";
+
 // ==================== WORD COUNT HELPER ====================
 const countWords = (text: string): number => {
   return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
@@ -349,6 +353,7 @@ const GenerateAdContent = () => {
   const [isPrefillingFromCampaign, setIsPrefillingFromCampaign] =
     useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // ==================== CREATIVE CONTROLS ====================
   const [selectedTone, setSelectedTone] = useState<string>("casual");
@@ -754,7 +759,21 @@ const GenerateAdContent = () => {
 
   // ==================== IMAGE UPLOAD ====================
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const allFiles = Array.from(e.target.files || []);
+    if (allFiles.length === 0) return;
+
+    // Filter only JPG/JPEG/PNG — reject WebP and other formats
+    const files = allFiles.filter((file) =>
+      ALLOWED_IMAGE_TYPES.includes(file.type),
+    );
+
+    const rejectedCount = allFiles.length - files.length;
+    if (rejectedCount > 0) {
+      toast.error(
+        `${rejectedCount} plik${rejectedCount > 1 ? "i zostały pominięte" : " został pominięty"} — obsługiwane formaty to tylko JPG i PNG (WebP nie jest obsługiwany)`,
+      );
+    }
+
     if (files.length === 0) return;
 
     if (productImages.length + files.length > MAX_IMAGES) {
@@ -822,6 +841,9 @@ const GenerateAdContent = () => {
     hasEnoughCredits && selectedStyles.length > 0 && productImages.length > 0;
 
   const handleGenerate = async () => {
+    // Guard: prevent multiple simultaneous generations
+    if (isGenerating) return;
+
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -848,6 +870,8 @@ const GenerateAdContent = () => {
       });
       return;
     }
+
+    setIsGenerating(true);
 
     try {
       const projectData = {
@@ -949,19 +973,30 @@ const GenerateAdContent = () => {
           }
 
           if (!n8nResponse.ok) {
-            failedProjects.push({ projectId, style, error: n8nData });
-            continue;
+            // Critical error from n8n — stop everything immediately
+            const errMsg =
+              typeof n8nData?.error === "string"
+                ? n8nData.error
+                : typeof n8nData?.message === "string"
+                  ? n8nData.message
+                  : "Generation failed";
+            toast.error(`Generation error: ${errMsg}`, {
+              description: "No videos were generated. Please try again.",
+            });
+            setIsGenerating(false);
+            return;
           }
 
           successfulProjects.push({ projectId, style });
           if (i < projectIds.length - 1) await delay(500);
         } catch (error) {
-          failedProjects.push({
-            projectId,
-            style,
-            error: error instanceof Error ? error.message : String(error),
+          // Network or parse error — stop immediately
+          const errMsg = error instanceof Error ? error.message : String(error);
+          toast.error("Generation failed", {
+            description: errMsg || "Please try again or contact support.",
           });
-          continue;
+          setIsGenerating(false);
+          return;
         }
       }
 
@@ -1007,6 +1042,8 @@ const GenerateAdContent = () => {
           description:
             "Please try again or contact support if the issue persists",
         });
+        setIsGenerating(false);
+        return;
       }
 
       router.push("/dashboard/my-ads?refresh=true");
@@ -1015,6 +1052,7 @@ const GenerateAdContent = () => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       toast.error("Failed to generate ads", { description: errorMessage });
+      setIsGenerating(false);
     }
   };
 
@@ -1265,6 +1303,9 @@ const GenerateAdContent = () => {
                       details, lifestyle shots, packaging. More variety = better
                       AI-generated videos!
                     </p>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      📎 Supported formats: JPG, JPEG, PNG (WebP not supported)
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1297,11 +1338,14 @@ const GenerateAdContent = () => {
                       <p className="text-xs text-center px-2">
                         {productImages.length === 0 ? "Add photos" : "Add more"}
                       </p>
+                      <p className="text-[9px] text-muted-foreground text-center px-1 mt-0.5">
+                        JPG, PNG only
+                      </p>
                     </>
                   )}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={ALLOWED_IMAGE_EXTENSIONS}
                     multiple
                     onChange={handleImageUpload}
                     className="hidden"
@@ -1789,19 +1833,31 @@ const GenerateAdContent = () => {
               variant="outline"
               onClick={() => router.push("/dashboard/my-ads")}
               className="flex-1"
+              disabled={isGenerating}
             >
               Cancel
             </Button>
             <Button
               onClick={handleGenerate}
               className="flex-1 gap-2"
-              disabled={!canGenerate || productImages.length === 0}
+              disabled={
+                !canGenerate || productImages.length === 0 || isGenerating
+              }
               size="lg"
             >
-              <Wand2 className="w-5 h-5" />
-              {selectedStyles.length > 0
-                ? `Generate ${selectedStyles.length} Video${selectedStyles.length !== 1 ? "s" : ""} (${estimatedCost} credits)`
-                : "Generate Videos"}
+              {isGenerating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-5 h-5" />
+                  {selectedStyles.length > 0
+                    ? `Generate ${selectedStyles.length} Video${selectedStyles.length !== 1 ? "s" : ""} (${estimatedCost} credits)`
+                    : "Generate Videos"}
+                </>
+              )}
             </Button>
           </div>
 
