@@ -27,164 +27,120 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Pobierz dane projektu i kampanii
-    console.log("📥 Fetching project data for:", projectId);
     const { data: project, error: projectError } = await supabase
       .from("projects")
-      .select(
-        `
-        *,
-        campaigns (
-          name,
-          description,
-          product_image_url
-        )
-      `,
-      )
+      .select(`*, campaigns (name, description, product_image_url)`)
       .eq("id", projectId)
       .single();
 
-    if (projectError) {
+    if (projectError || !project) {
       console.error("❌ Error fetching project:", projectError);
       return NextResponse.json(
         {
           success: false,
-          error: `Failed to fetch project: ${projectError.message}`,
+          error: `Project not found: ${projectError?.message}`,
         },
-        { status: 500 },
-      );
-    }
-
-    if (!project) {
-      console.error("❌ Project not found:", projectId);
-      return NextResponse.json(
-        { success: false, error: "Project not found" },
         { status: 404 },
       );
     }
 
-    console.log("✅ Fetched project data:", project);
+    console.log("✅ Fetched project:", project);
 
-    // 2. Usuń failed video z bazy
+    // 2. Usuń failed video(s) z bazy
     if (videoId) {
-      console.log("🗑️ Deleting failed video:", videoId);
-      const { error: deleteVideoError } = await supabase
-        .from("videos")
-        .delete()
-        .eq("id", videoId);
-
-      if (deleteVideoError) {
-        console.error("❌ Error deleting video:", deleteVideoError);
-      } else {
-        console.log("✅ Deleted failed video:", videoId);
-      }
+      await supabase.from("videos").delete().eq("id", videoId);
+      console.log("🗑️ Deleted failed video:", videoId);
     } else {
-      console.log("🗑️ Deleting all failed videos from project:", projectId);
-      const { error: deleteVideosError } = await supabase
+      await supabase
         .from("videos")
         .delete()
         .eq("project_id", projectId)
         .eq("status", "failed");
-
-      if (deleteVideosError) {
-        console.error("⚠️ Error deleting failed videos:", deleteVideosError);
-      } else {
-        console.log("✅ Deleted all failed videos from project");
-      }
+      console.log("🗑️ Deleted all failed videos for project:", projectId);
     }
 
     // 3. Ustaw projekt na "processing"
-    console.log("🔄 Updating project status to processing:", projectId);
-    const { data: updatedProject, error: updateProjectError } = await supabase
+    const { error: updateError } = await supabase
       .from("projects")
-      .update({
-        status: "processing",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", projectId)
-      .select()
-      .single();
+      .update({ status: "processing", updated_at: new Date().toISOString() })
+      .eq("id", projectId);
 
-    if (updateProjectError) {
-      console.error("❌ Error updating project status:", updateProjectError);
+    if (updateError) {
+      console.error("❌ Error updating project status:", updateError);
       return NextResponse.json(
         {
           success: false,
-          error: `Failed to update project status: ${updateProjectError.message}`,
+          error: `Failed to update project: ${updateError.message}`,
         },
         { status: 500 },
       );
     }
 
-    console.log("✅ Successfully reset project to processing:", updatedProject);
+    console.log("✅ Project reset to processing");
 
-    // 4. Przygotuj dane dla sendtoN8n
+    // 4. Obsłuż product_image_url — może być string, string z przecinkami, lub array
     const campaign = project.campaigns;
+    let productImages: string[] = [];
+
+    if (campaign?.product_image_url) {
+      if (Array.isArray(campaign.product_image_url)) {
+        productImages = campaign.product_image_url;
+      } else if (typeof campaign.product_image_url === "string") {
+        productImages = campaign.product_image_url.includes(",")
+          ? campaign.product_image_url.split(",").map((u: string) => u.trim())
+          : [campaign.product_image_url];
+      }
+    }
+
+    // 5. Przygotuj payload — taki sam format jak generateAd wysyła do sendToN8n
     const n8nPayload = {
       project_id: projectId,
-      campaign_id: project.campaign_id,
+      campaign_id: project.campaign_id ?? null,
       user_id: userId,
-      product_name: campaign?.name || null,
-      description: campaign?.description || null,
-      product_image_url: campaign?.product_image_url || null,
-      product_images: campaign?.product_image_url
-        ? [campaign.product_image_url]
-        : [],
-      selected_styles: project.selected_styles || [],
-      language: project.language || "English",
-      quality: project.quality || "720p",
-      duration: project.duration || 10,
-      plan: project.plan || "free",
-      tone_of_voice: project.tone_of_voice || "casual",
-      custom_hook: project.custom_hook || null,
-      key_message: project.key_message || null,
-      call_to_action: project.call_to_action || null,
-      target_audience: project.target_audience || null,
-      key_selling_points: project.key_selling_points || null,
+      product_name: campaign?.name ?? null,
+      description: campaign?.description ?? null,
+      product_images: productImages,
+      selected_styles: project.selected_styles ?? [],
+      language: project.language ?? "English",
+      quality: project.quality ?? "720p",
+      duration: project.duration ?? 10,
+      plan: "free",
+      tone_of_voice: project.tone_of_voice ?? "casual",
+      custom_hook: project.custom_hook ?? null,
+      call_to_action: project.call_to_action ?? null,
     };
 
-    console.log("🚀 Payload to send:", n8nPayload);
+    console.log(
+      "🚀 Payload for sendToN8n:",
+      JSON.stringify(n8nPayload, null, 2),
+    );
 
-    // 5. ✅ Wywołaj endpoint sendtoN8n używając LOKALNEGO URL
-    const baseUrl = request.url.includes("localhost")
-      ? "http://localhost:3000"
-      : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // 6. ✅ POPRAWKA: origin pobieramy z request.url zamiast hardkodować
+    //    Na Vercelu zwraca: https://adstreamai.com
+    //    Na localhost zwraca: http://localhost:3000
+    const { origin } = new URL(request.url);
+    const sendToN8nUrl = `${origin}/api/sendToN8n`;
+    console.log("📡 Calling:", sendToN8nUrl);
 
-    const sendToN8nUrl = `${baseUrl}/api/sendToN8n`;
-    console.log("📡 Calling sendtoN8n at:", sendToN8nUrl);
-
-    let n8nResponse;
-    try {
-      n8nResponse = await fetch(sendToN8nUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(n8nPayload),
-      });
-    } catch (fetchError: any) {
-      console.error("❌ Fetch failed:", fetchError.message);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Connection failed: ${fetchError.message}. Is the server running?`,
-        },
-        { status: 500 },
-      );
-    }
-
-    console.log("📡 Response status:", n8nResponse.status);
+    const n8nResponse = await fetch(sendToN8nUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(n8nPayload),
+    });
 
     const responseText = await n8nResponse.text();
-    console.log("📡 Response body:", responseText);
+    console.log("📡 sendToN8n status:", n8nResponse.status);
+    console.log("📡 sendToN8n body:", responseText);
 
     if (!n8nResponse.ok) {
-      let errorMessage = `sendtoN8n failed with status ${n8nResponse.status}`;
+      let errorMessage = `sendToN8n failed with status ${n8nResponse.status}`;
       try {
         const errorData = JSON.parse(responseText);
         errorMessage = errorData.error || errorData.details || errorMessage;
-      } catch (e) {
+      } catch {
         errorMessage = responseText || errorMessage;
       }
-
-      console.error("❌ sendtoN8n error:", errorMessage);
+      console.error("❌ sendToN8n error:", errorMessage);
       return NextResponse.json(
         { success: false, error: errorMessage },
         { status: 500 },
@@ -194,9 +150,7 @@ export async function POST(request: NextRequest) {
     let responseData;
     try {
       responseData = JSON.parse(responseText);
-      console.log("✅ Parsed response:", responseData);
-    } catch (parseError) {
-      console.warn("⚠️ Non-JSON response, using as text");
+    } catch {
       responseData = { message: responseText };
     }
 
@@ -208,8 +162,7 @@ export async function POST(request: NextRequest) {
       data: responseData,
     });
   } catch (error: any) {
-    console.error("❌ Retry error:", error);
-    console.error("❌ Stack:", error.stack);
+    console.error("❌ Retry error:", error.message);
     return NextResponse.json(
       {
         success: false,

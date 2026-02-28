@@ -576,7 +576,7 @@ const MyContent = () => {
     const checkStuckProjects = async () => {
       if (!userId) return;
 
-      const TIMEOUT_MS = 15 * 60 * 1000;
+      const TIMEOUT_MS = 10 * 60 * 1000;
       const now = Date.now();
 
       for (const campaign of campaigns) {
@@ -633,7 +633,7 @@ const MyContent = () => {
                 toast.error(
                   `Generation timeout: ${project.selected_styles?.[0] || "video"}`,
                   {
-                    description: `No response after 15 minutes. ${costPerVideo} credits refunded. You can retry below.`,
+                    description: `No response after 10 minutes. ${costPerVideo} credits refunded. You can retry below.`,
                     duration: 10000,
                   },
                 );
