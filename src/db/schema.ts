@@ -61,7 +61,7 @@ export const toneEnum = pgEnum("tone_of_voice", [
   "luxury",
   "urgent",
 ]);
-
+//Waitlist
 export const waitlistStatusEnum = pgEnum("waitlist_status", [
   "pending",
   "accepted",
