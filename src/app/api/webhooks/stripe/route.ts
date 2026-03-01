@@ -2,22 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
+// Mapowanie Price ID ze Stripe na nazwy planów
 const PLAN_MAP: Record<string, string> = {
-  price_1T2WB5Cm9MZJpse9yE1y7sw2: "starter", // monthly
-  price_1T2WlbCm9MZJpse9q9ZlPw5N: "starter", // yearly
-  price_1T2WFPCm9MZJpse9vbN0mGFa: "pro", // monthly
-  price_1T2WnXCm9MZJpse9D7tcXiZ7: "pro", // yearly
-  price_1T2WHFCm9MZJpse9SF11AL1f: "scale", // monthly
-  price_1T2XCZCm9MZJpse9jOy2V7Kw: "scale", // yearly
+  // Plan STARTER
+  price_1T2WB5Cm9MZJpse9yE1y7sw2: "starter", // Miesięczny
+  price_1T2WlbCm9MZJpse9q9ZlPw5N: "starter", // Roczny
+
+  // Plan PRO
+  price_1T2WFPCm9MZJpse9vbN0mGFa: "pro", // Miesięczny
+  price_1T2WnXCm9MZJpse9D7tcXiZ7: "pro", // Roczny
+
+  // Plan SCALE
+  price_1T2WHFCm9MZJpse9SF11AL1f: "scale", // Miesięczny
+  price_1T2XCZCm9MZJpse9jOy2V7Kw: "scale", // Roczny
 };
 
+// Ile kredytów dodajemy przy zakupie/odnowieniu
 const CREDITS_MAP: Record<string, number> = {
   starter: 300,
   pro: 750,
   scale: 2000,
 };
 
-// Bezpieczna konwersja timestamp → ISO string
 function safeDate(timestamp: any): string | null {
   if (!timestamp || isNaN(Number(timestamp))) return null;
   try {
@@ -47,15 +53,13 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 
-  if (!sig) {
+  if (!sig)
     return NextResponse.json({ message: "No signature." }, { status: 400 });
-  }
 
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
-    console.error("Webhook signature error:", err);
     return NextResponse.json(
       { message: "Invalid signature." },
       { status: 400 },
@@ -64,43 +68,22 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
-      // ────────────────────────────────────────────
-      // Nowa subskrypcja
-      // ────────────────────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-
-        console.log(
-          "📧 customer_details:",
-          JSON.stringify(session.customer_details),
-        );
-        console.log("🔑 metadata:", JSON.stringify(session.metadata));
-
         let userId = session.metadata?.userId;
 
         if (!userId) {
           const customerEmail = session.customer_details?.email;
-          if (!customerEmail) {
-            console.error("checkout.session.completed: brak userId i emaila");
-            break;
-          }
+          if (!customerEmail) break;
           const { data: userByEmail } = await supabase
             .from("users")
             .select("id")
             .eq("email", customerEmail)
             .single();
-
-          if (!userByEmail?.id) {
-            console.error(
-              `checkout.session.completed: nie znaleziono usera dla ${customerEmail}`,
-            );
-            break;
-          }
-          userId = userByEmail.id;
-          console.log(
-            `✅ Znaleziono userId po emailu: ${customerEmail} → ${userId}`,
-          );
+          userId = userByEmail?.id;
         }
+
+        if (!userId) break;
 
         const subscriptionId = session.subscription as string;
         const subscription = (await stripe.subscriptions.retrieve(
@@ -110,10 +93,7 @@ export async function POST(req: NextRequest) {
         const plan = PLAN_MAP[priceId] ?? "starter";
         const periodEnd = safeDate(subscription.current_period_end);
 
-        console.log(
-          `📦 plan=${plan}, priceId=${priceId}, periodEnd=${periodEnd}`,
-        );
-
+        // 1. Aktualizacja subskrypcji
         const { error: subError } = await supabase.from("subscriptions").upsert(
           {
             user_id: userId,
@@ -126,69 +106,59 @@ export async function POST(req: NextRequest) {
           },
           { onConflict: "user_id" },
         );
+        if (subError)
+          console.error("Supabase upsert subscription error:", subError);
 
-        if (subError) {
-          console.error("subError:", subError);
-          throw subError;
-        }
+        // 2. Pobierz stare kredyty i dodaj nowe
+        const { data: user, error: userFetchError } = await supabase
+          .from("users")
+          .select("credits")
+          .eq("id", userId)
+          .single();
+        if (userFetchError)
+          console.error("Supabase fetch user error:", userFetchError);
 
-        const { error: userError } = await supabase
+        const currentCredits = user?.credits || 0;
+        const addedCredits = CREDITS_MAP[plan] || 0;
+
+        const { error: userUpdateError } = await supabase
           .from("users")
           .update({
             plan,
-            credits: CREDITS_MAP[plan],
+            credits: currentCredits + addedCredits,
             updated_at: new Date().toISOString(),
           })
           .eq("id", userId);
+        if (userUpdateError)
+          console.error("Supabase update user error:", userUpdateError);
 
-        if (userError) {
-          console.error("userError:", userError);
-          throw userError;
-        }
-
-        console.log(
-          `✅ checkout.session.completed: userId=${userId}, plan=${plan}`,
-        );
         break;
       }
 
-      // ────────────────────────────────────────────
-      // Odnowienie subskrypcji — odśwież kredyty
-      // ────────────────────────────────────────────
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as any;
 
-        // Nowy SDK: subId może być w różnych miejscach
+        // ✅ FIX: Pomiń pierwszą fakturę — kredyty już dodane przez checkout.session.completed
+        if (invoice.billing_reason === "subscription_create") break;
+
         const subId =
           invoice.subscription ||
           invoice.parent?.subscription_details?.subscription;
-
-        console.log(`📄 invoice subId: ${subId}`);
-
-        if (!subId) {
-          console.log("invoice.payment_succeeded: brak subId, pomijam");
-          break;
-        }
+        if (!subId) break;
 
         const sub = (await stripe.subscriptions.retrieve(subId)) as any;
         const priceId = sub.items.data[0].price.id;
         const plan = PLAN_MAP[priceId] ?? "starter";
         const periodEnd = safeDate(sub.current_period_end);
 
-        const { data: existingSub, error: findError } = await supabase
+        const { data: existingSub } = await supabase
           .from("subscriptions")
           .select("user_id")
           .eq("stripe_subscription_id", subId)
           .single();
+        if (!existingSub?.user_id) break;
 
-        if (findError || !existingSub?.user_id) {
-          console.log(
-            "invoice.payment_succeeded: nie znaleziono subskrypcji w bazie",
-          );
-          break;
-        }
-
-        const { error: subError } = await supabase
+        const { error: subUpdateError } = await supabase
           .from("subscriptions")
           .update({
             status: "active",
@@ -197,135 +167,87 @@ export async function POST(req: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq("stripe_subscription_id", subId);
+        if (subUpdateError)
+          console.error("Supabase update subscription error:", subUpdateError);
 
-        if (subError) throw subError;
+        // Dodanie kredytów przy odnowieniu (monthly/yearly)
+        const { data: user, error: userFetchError } = await supabase
+          .from("users")
+          .select("credits")
+          .eq("id", existingSub.user_id)
+          .single();
+        if (userFetchError)
+          console.error("Supabase fetch user error:", userFetchError);
 
-        const { error: userError } = await supabase
+        const renewedCredits = (user?.credits || 0) + (CREDITS_MAP[plan] || 0);
+
+        const { error: userUpdateError } = await supabase
           .from("users")
           .update({
             plan,
-            credits: CREDITS_MAP[plan],
+            credits: renewedCredits,
             updated_at: new Date().toISOString(),
           })
           .eq("id", existingSub.user_id);
+        if (userUpdateError)
+          console.error("Supabase update user error:", userUpdateError);
 
-        if (userError) throw userError;
-
-        console.log(
-          `✅ invoice.payment_succeeded: userId=${existingSub.user_id}, credits=${CREDITS_MAP[plan]}`,
-        );
         break;
       }
 
-      // ────────────────────────────────────────────
-      // Nieudana płatność
-      // ────────────────────────────────────────────
       case "invoice.payment_failed": {
         const invoice = event.data.object as any;
-        const subId =
-          invoice.subscription ||
-          invoice.parent?.subscription_details?.subscription;
-
-        if (!subId) break;
-
-        const { error } = await supabase
-          .from("subscriptions")
-          .update({ status: "past_due", updated_at: new Date().toISOString() })
-          .eq("stripe_subscription_id", subId);
-
-        if (error) throw error;
-
-        console.log(`⚠️ invoice.payment_failed: subId=${subId}`);
+        const subId = invoice.subscription;
+        if (subId) {
+          const { error } = await supabase
+            .from("subscriptions")
+            .update({
+              status: "past_due",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("stripe_subscription_id", subId);
+          if (error) console.error("Supabase update past_due error:", error);
+        }
         break;
       }
 
-      // ────────────────────────────────────────────
-      // Upgrade / downgrade planu
-      // ────────────────────────────────────────────
-      case "customer.subscription.updated": {
-        const sub = event.data.object as any;
-        const priceId = sub.items.data[0].price.id;
-        const plan = PLAN_MAP[priceId] ?? "starter";
-        const periodEnd = safeDate(sub.current_period_end);
-
-        const { data: existingSub, error: findError } = await supabase
-          .from("subscriptions")
-          .select("user_id")
-          .eq("stripe_subscription_id", sub.id)
-          .single();
-
-        if (findError || !existingSub?.user_id) break;
-
-        const { error: subError } = await supabase
-          .from("subscriptions")
-          .update({
-            stripe_price_id: priceId,
-            status: sub.status,
-            ...(periodEnd ? { current_period_end: periodEnd } : {}),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("stripe_subscription_id", sub.id);
-
-        if (subError) throw subError;
-
-        const { error: userError } = await supabase
-          .from("users")
-          .update({ plan, updated_at: new Date().toISOString() })
-          .eq("id", existingSub.user_id);
-
-        if (userError) throw userError;
-
-        console.log(
-          `✅ customer.subscription.updated: userId=${existingSub.user_id}, plan=${plan}`,
-        );
-        break;
-      }
-
-      // ────────────────────────────────────────────
-      // Anulowanie subskrypcji
-      // ────────────────────────────────────────────
       case "customer.subscription.deleted": {
         const sub = event.data.object as any;
-
-        const { data: existingSub, error: findError } = await supabase
+        const { data: existingSub } = await supabase
           .from("subscriptions")
           .select("user_id")
           .eq("stripe_subscription_id", sub.id)
           .single();
 
-        if (findError || !existingSub?.user_id) break;
+        if (existingSub?.user_id) {
+          const { error: subError } = await supabase
+            .from("subscriptions")
+            .update({
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("stripe_subscription_id", sub.id);
+          if (subError)
+            console.error("Supabase cancel subscription error:", subError);
 
-        const { error: subError } = await supabase
-          .from("subscriptions")
-          .update({ status: "cancelled", updated_at: new Date().toISOString() })
-          .eq("stripe_subscription_id", sub.id);
-
-        if (subError) throw subError;
-
-        const { error: userError } = await supabase
-          .from("users")
-          .update({
-            plan: "free",
-            credits: 50,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingSub.user_id);
-
-        if (userError) throw userError;
-
-        console.log(
-          `✅ customer.subscription.deleted: userId=${existingSub.user_id}`,
-        );
+          // Użytkownik wraca na free - nie zerujemy mu kredytów, które już kupił, ale zmieniamy plan
+          const { error: userError } = await supabase
+            .from("users")
+            .update({
+              plan: "free",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingSub.user_id);
+          if (userError)
+            console.error("Supabase update user to free error:", userError);
+        }
         break;
       }
-
-      default:
-        console.log(`Nieobsługiwany event: ${event.type}`);
     }
   } catch (err) {
-    console.error("Webhook handler error:", err);
+    console.error("Webhook Error:", err);
     return NextResponse.json(
-      { message: "Something went wrong. Please try again." },
+      { message: "Webhook handler failed" },
       { status: 500 },
     );
   }

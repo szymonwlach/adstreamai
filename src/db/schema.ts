@@ -78,7 +78,7 @@ export const usersTable = pgTable("users", {
   display_name: text("display_name"),
   avatar_url: text("avatar_url"),
   plan: planEnum("plan").notNull().default("free"),
-  credits: integer("credits").notNull().default(50),
+  credits: integer("credits").notNull().default(15),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   is_active: boolean("is_active").notNull().default(true),
