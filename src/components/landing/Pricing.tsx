@@ -880,7 +880,7 @@ export const Pricing = () => {
                 </a>
               </p>
             </div>
-
+            {/* test */}
             {!isDashboard && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
