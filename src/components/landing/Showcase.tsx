@@ -469,7 +469,7 @@ const AdTransformationShowcase = () => {
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               <span className="text-muted-foreground text-xs sm:text-sm">
-                Under 3 min creation
+                Under 4 min creation
               </span>
             </div>
             <div className="flex items-center gap-2">

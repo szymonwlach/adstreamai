@@ -37,7 +37,7 @@ export const HowItWorks = () => {
         <div className="text-center max-w-3xl mx-auto mb-20">
           <h2 className="text-4xl sm:text-5xl font-bold mb-6 tracking-tight">
             From one photo to 10+ videos
-            <span className="text-gradient"> in under 3 minutes</span>
+            <span className="text-gradient"> in under 4 minutes</span>
           </h2>
           <p className="text-xl text-muted-foreground">
             No video editing experience needed. No complicated setup. Just
@@ -196,7 +196,7 @@ export const HowItWorks = () => {
           <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20">
             <span className="text-2xl">⚡</span>
             <span className="font-semibold text-foreground">
-              Average time: Under 3 minutes
+              Average time: Under 4 minutes
             </span>
             <span className="text-muted-foreground">to generate 5+ videos</span>
           </div>

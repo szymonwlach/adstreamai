@@ -294,12 +294,13 @@ export const Features = () => {
                 Fine-tune every detail (optional)
               </h3>
               <p className="text-muted-foreground text-lg">
-                Want more control? Customize tone, hooks, CTAs, and messaging
-                for each video style
+                Want more control? Customize tone, hooks, and CTAs for each
+                video style
               </p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
+              {/* Card 1 — Tone of Voice */}
               <div className="p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                   <span className="text-xl">🎭</span>
@@ -322,43 +323,46 @@ export const Features = () => {
                 </div>
               </div>
 
+              {/* Card 2 — Opening Hook */}
               <div className="p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                   <span className="text-xl">🎣</span>
                 </div>
-                <h4 className="font-semibold text-lg mb-2">
-                  Opening Hook & CTA
-                </h4>
+                <h4 className="font-semibold text-lg mb-2">Opening Hook</h4>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Set custom opening hooks and calls to action for maximum
-                  engagement
+                  Set a custom opening line that grabs attention in the first
+                  second and stops the scroll
                 </p>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
-                    <span className="font-medium">Hooks:</span> "Stop
-                    scrolling!", "You need to see this"
+                <div className="space-y-1.5">
+                  <div className="text-xs px-2.5 py-1.5 rounded-md bg-muted text-muted-foreground">
+                    "Stop scrolling — this changes everything"
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    <span className="font-medium">CTAs:</span> "Shop Now",
-                    "Learn More", "Try It Free"
+                  <div className="text-xs px-2.5 py-1.5 rounded-md bg-muted text-muted-foreground">
+                    "You need to see this before you buy"
                   </div>
                 </div>
               </div>
 
+              {/* Card 3 — Call to Action */}
               <div className="p-6 rounded-2xl bg-card border border-border/50 hover:border-primary/30 transition-all">
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                  <span className="text-xl">💬</span>
+                  <span className="text-xl">⚡</span>
                 </div>
-                <h4 className="font-semibold text-lg mb-2">
-                  Key Message & USPs
-                </h4>
+                <h4 className="font-semibold text-lg mb-2">Call to Action</h4>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Define your target audience, key selling points, and core
-                  message
+                  Define the exact action you want viewers to take at the end of
+                  each video
                 </p>
-                <div className="text-xs text-muted-foreground">
-                  Perfect for laser-focused ads that speak directly to your
-                  ideal customer
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-2 py-1 rounded-md bg-muted text-xs">
+                    Shop Now
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-muted text-xs">
+                    Try It Free
+                  </span>
+                  <span className="px-2 py-1 rounded-md bg-muted text-xs">
+                    Learn More
+                  </span>
                 </div>
               </div>
             </div>
@@ -373,9 +377,10 @@ export const Features = () => {
                     AI does the heavy lifting by default
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Our AI automatically generates optimized hooks, CTAs, and
-                    messaging for each video style. Use custom options only when
-                    you need precise control over your ad copy.
+                    Our AI automatically analyzes your product photo and
+                    generates optimized hooks, CTAs, tone, key selling points,
+                    and target audience for each video style. Use the options
+                    above only when you need precise control over your ad copy.
                   </p>
                 </div>
               </div>
